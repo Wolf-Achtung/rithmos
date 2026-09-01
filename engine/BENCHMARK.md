@@ -40,3 +40,18 @@ Machine: Intel Xeon @ 2.80 GHz (4 vCPU container), Node 22.22.2, Vitest 4.1.11.
 
 Not a Wolf-Ping: the numbers allow a usable opponent. They do rule out a
 naive full-width search, which is recorded here as a design constraint.
+
+## search.ts presets, 2026-09-01
+
+Position: the fixture without the two rounds that complete a harmony at once
+(`engine/bench/search.bench.ts`), so the search cannot short-circuit on a win.
+
+| Preset | depth / breadth / noise | mean per move |
+|---|---|---|
+| novice | 1 / 8 / 60 | 64 ms |
+| apprentice | 2 / 10 / 15 | 454 ms |
+| master | 3 / 6 / 0 | 689 ms |
+
+Each node costs one `autoTurn` (captures), one `playTurn` (victory check) and
+one `evaluate` (reachable harmonies and captures for both sides), roughly
+1 ms. That budget, not the harmony enumeration alone, sets the tree size.
