@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .db import make_pool
-from .routers import health
+from .routers import accounts, coverage, health
 from .settings import Settings
 
 
@@ -33,6 +33,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             allow_headers=["*"],
         )
     app.include_router(health.router)
+    app.include_router(accounts.router)
+    app.include_router(coverage.router)
     return app
 
 
