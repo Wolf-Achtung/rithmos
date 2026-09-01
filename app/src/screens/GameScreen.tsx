@@ -13,9 +13,11 @@ import { colors, spacing } from '../theme';
 interface Props {
   settings: Settings;
   onNewGame: () => void;
+  /** Called once per scored marking with the coverage of that move (0..1). */
+  onCoverage: (coverage: number) => void;
 }
 
-export function GameScreen({ settings, onNewGame }: Props) {
+export function GameScreen({ settings, onNewGame, onCoverage }: Props) {
   const [state, dispatch] = useReducer(reduce, settings, newGame);
   const { width, height } = useWindowDimensions();
   const cellSize = Math.floor(Math.min((Math.min(width, 520) - 16) / 8, (height - 230) / 16));
@@ -23,6 +25,12 @@ export function GameScreen({ settings, onNewGame }: Props) {
   useEffect(() => {
     dispatch({ type: 'new_game', settings });
   }, [settings]);
+
+  useEffect(() => {
+    if (state.coverage !== null && state.phase === 'move') onCoverage(state.coverage);
+    // one record per turn: the store sets coverage exactly once, on confirm_mark
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state.coverage, state.turnNumber]);
 
   // The opponent runs on the JS thread after the UI has shown "thinking".
   useEffect(() => {
