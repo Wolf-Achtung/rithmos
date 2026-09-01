@@ -5,8 +5,9 @@
  * Captures are enumerated against a position; when they are declared is a
  * rule datum (rules.captureTiming), handled by game.ts.
  */
-import { opponent, piecesOf, replacePiece, requirePiece } from './board';
-import { canReach, legalMoves, legalMovesOf, applyMove } from './moves';
+import { inBounds, opponent, pieceAt, piecesOf, replacePiece, requirePiece } from './board';
+import { applyMove, canReach, directionsFor, legalMoves, legalMovesOf, movementShapes } from './moves';
+import type { Move } from './moves';
 import type { PieceId, PlacedPiece, Position, Side } from './types';
 
 export type CaptureMethod = 'meeting' | 'ambush' | 'assault' | 'siege';
@@ -92,9 +93,66 @@ export function meetingCaptures(pos: Position, side: Side): Capture[] {
   return out;
 }
 
+/**
+ * Pieces standing in the way of `piece`: the first occupant on each regular
+ * path, within the reach of the piece. Includes pieces of both sides.
+ */
+export function blockingPieces(pos: Position, piece: PlacedPiece): PlacedPiece[] {
+  const out: PlacedPiece[] = [];
+  const seen = new Set<PieceId>();
+  for (const shape of movementShapes(piece)) {
+    const rule = pos.rules.movement[shape];
+    for (const d of directionsFor(rule.directions)) {
+      let sq = piece.square;
+      for (let step = 1; step <= rule.steps; step++) {
+        sq = { file: sq.file + d.df, rank: sq.rank + d.dr };
+        if (!inBounds(pos.rules, sq)) break;
+        const occupant = pieceAt(pos, sq);
+        if (occupant) {
+          if (!seen.has(occupant.id)) {
+            seen.add(occupant.id);
+            out.push(occupant);
+          }
+          break;
+        }
+      }
+    }
+  }
+  return out;
+}
+
+/**
+ * Siege: the enemy piece can neither move nor be freed by a single move of
+ * one of its own side's pieces. At least one of the blockers must belong to
+ * the besieging side (board edges and the target's own pieces do not besiege
+ * on their own).
+ */
+export function siegeCaptures(pos: Position, side: Side): Capture[] {
+  const out: Capture[] = [];
+  const enemySide = opponent(side);
+  let friendlyMoves: Move[] | null = null;
+  for (const b of piecesOf(pos, enemySide)) {
+    if (legalMovesOf(pos, b).length > 0) continue;
+    const besiegers = blockingPieces(pos, b).filter((p) => p.side === side);
+    if (besiegers.length === 0) continue;
+    friendlyMoves ??= legalMoves(pos, enemySide);
+    let freeable = false;
+    for (const m of friendlyMoves) {
+      if (m.pieceId === b.id) continue;
+      if (legalMovesOf(applyMove(pos, m), b).length > 0) {
+        freeable = true;
+        break;
+      }
+    }
+    if (freeable) continue;
+    out.push({ method: 'siege', by: besiegers.map((p) => p.id), target: b.id, detail: { method: 'siege' } });
+  }
+  return out;
+}
+
 /** All captures available to `side` in this position, every method. */
 export function findCaptures(pos: Position, side: Side): Capture[] {
-  return [...meetingCaptures(pos, side)];
+  return [...meetingCaptures(pos, side), ...siegeCaptures(pos, side)];
 }
 
 /** Remove the captured piece, or the captured pyramid component. */
@@ -116,6 +174,3 @@ export function captureToString(c: Capture): string {
   const comp = c.component === undefined ? '' : ` (component ${c.component})`;
   return `${c.method}: ${c.by.join('+')} takes ${c.target}${comp}`;
 }
-
-// re-exported for siblings that reason about mobility
-export { legalMoves, legalMovesOf, applyMove };

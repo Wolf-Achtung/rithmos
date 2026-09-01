@@ -108,6 +108,7 @@ export const mebben: RuleSet = {
     'captures are declared after the regular move, by any own piece, against the resulting position',
     'shapes of the pyramid components (squares, triangles, rounds from the largest down)',
     'a pyramid component can be captured on its own value',
+    'a siege needs at least one besieging piece among the blockers; edges and own pieces alone do not besiege',
     'in an angle the piece at the corner carries the middle value; in a square of four the values are read sorted',
   ],
 };
