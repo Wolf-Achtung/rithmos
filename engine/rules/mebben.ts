@@ -102,13 +102,14 @@ export const mebben: RuleSet = {
     major: { pieces: 4, harmonies: 2, exactly: true },
     greatest: { pieces: 4, harmonies: 3, exactly: false },
   },
+  // Shown in the app on the rules screen, therefore in German.
   unverified: [
-    'starting squares of the pieces (values and shapes are verified by construction)',
-    'no jumping: intermediate squares of a move must be empty',
-    'captures are declared after the regular move, by any own piece, against the resulting position',
-    'shapes of the pyramid components (squares, triangles, rounds from the largest down)',
-    'a pyramid component can be captured on its own value',
-    'a siege needs at least one besieging piece among the blockers; edges and own pieces alone do not besiege',
-    'in an angle the piece at the corner carries the middle value; in a square of four the values are read sorted',
+    'Startaufstellung: Werte und Formen sind per Konstruktion sicher, die Felder sind vorläufig',
+    'Kein Springen: die Zwischenfelder eines Zuges müssen frei sein',
+    'Schläge werden nach dem regulären Zug erklärt, durch beliebige eigene Steine, gegen die entstandene Stellung',
+    'Formen der Pyramidenbestandteile: Quadrate, Dreiecke, Runde, vom größten Wert abwärts',
+    'Ein Pyramidenbestandteil kann einzeln auf seinen Wert geschlagen werden',
+    'Eine Belagerung braucht mindestens einen belagernden Stein unter den Blockern; Rand und eigene Steine allein belagern nicht',
+    'Im Winkel trägt der Eckstein den mittleren Wert; im Quadrat aus vieren werden die Werte sortiert gelesen',
   ],
 };
