@@ -5,12 +5,13 @@ import type { CoverageRecord } from './src/coverage';
 import type { Settings } from './src/game/store';
 import { CoverageScreen } from './src/screens/CoverageScreen';
 import { GameScreen } from './src/screens/GameScreen';
+import { RulesScreen } from './src/screens/RulesScreen';
 import { SetupScreen } from './src/screens/SetupScreen';
 import { store } from './src/storage';
 import { texts } from './src/texts';
 import { colors, spacing } from './src/theme';
 
-type Screen = 'setup' | 'game' | 'coverage';
+type Screen = 'setup' | 'game' | 'coverage' | 'rules';
 
 const defaultSettings: Settings = { humanSide: 'white', strength: 'apprentice', assist: 3 };
 const COVERAGE_KEY = 'coverage';
@@ -54,6 +55,7 @@ export default function App() {
         <View style={styles.navRow}>
           {nav(screen === 'game' ? 'game' : 'setup', texts.play)}
           {nav('coverage', texts.coverage)}
+          {nav('rules', texts.rules)}
         </View>
       </View>
       {screen === 'setup' ? (
@@ -67,6 +69,7 @@ export default function App() {
       ) : null}
       {screen === 'game' ? <GameScreen settings={settings} onNewGame={() => setScreen('setup')} onCoverage={onCoverage} /> : null}
       {screen === 'coverage' ? <CoverageScreen records={records} /> : null}
+      {screen === 'rules' ? <RulesScreen /> : null}
       <StatusBar style="dark" />
     </SafeAreaView>
   );
