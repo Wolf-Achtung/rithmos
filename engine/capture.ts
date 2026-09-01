@@ -93,6 +93,63 @@ export function meetingCaptures(pos: Position, side: Side): Capture[] {
   return out;
 }
 
+function subsetsOfSize<T>(items: readonly T[], size: number): T[][] {
+  const out: T[][] = [];
+  const pick = (start: number, acc: T[]) => {
+    if (acc.length === size) {
+      out.push([...acc]);
+      return;
+    }
+    for (let i = start; i < items.length; i++) {
+      acc.push(items[i]!);
+      pick(i + 1, acc);
+      acc.pop();
+    }
+  };
+  pick(0, []);
+  return out;
+}
+
+/** Largest group of ambushing pieces considered for a sum. */
+const MAX_AMBUSH_GROUP = 4;
+
+/**
+ * Ambush: two or more own pieces could each, by their next regular move, land
+ * on the square of an enemy piece, and their sum or difference equals its value.
+ * The difference is taken for pairs; the sum for groups of two to four.
+ */
+export function ambushCaptures(pos: Position, side: Side): Capture[] {
+  const out: Capture[] = [];
+  const own = piecesOf(pos, side);
+  for (const b of piecesOf(pos, opponent(side))) {
+    const attackers = own.filter((a) => canReach(pos, a, b.square, { allowEnemyTarget: true }));
+    if (attackers.length < 2) continue;
+    const tvs = targetValues(pos, b);
+    for (let size = 2; size <= Math.min(MAX_AMBUSH_GROUP, attackers.length); size++) {
+      for (const group of subsetsOfSize(attackers, size)) {
+        const values = group.map((a) => a.value);
+        const by = group.map((a) => a.id);
+        const sum = values.reduce((s, v) => s + v, 0);
+        for (const tv of tvs) {
+          if (tv.value === sum) {
+            out.push(withComponent({ method: 'ambush', by, target: b.id, detail: { method: 'ambush', values, operation: 'sum', result: sum } }, tv));
+          }
+        }
+        if (size === 2) {
+          const diff = Math.abs(values[0]! - values[1]!);
+          if (diff === 0) continue;
+          for (const tv of tvs) {
+            if (tv.value === diff) {
+              out.push(withComponent({ method: 'ambush', by, target: b.id, detail: { method: 'ambush', values, operation: 'difference', result: diff } }, tv));
+            }
+          }
+        }
+      }
+    }
+  }
+  return out;
+}
+
 /**
  * Pieces standing in the way of `piece`: the first occupant on each regular
  * path, within the reach of the piece. Includes pieces of both sides.
@@ -152,7 +209,7 @@ export function siegeCaptures(pos: Position, side: Side): Capture[] {
 
 /** All captures available to `side` in this position, every method. */
 export function findCaptures(pos: Position, side: Side): Capture[] {
-  return [...meetingCaptures(pos, side), ...siegeCaptures(pos, side)];
+  return [...meetingCaptures(pos, side), ...ambushCaptures(pos, side), ...siegeCaptures(pos, side)];
 }
 
 /** Remove the captured piece, or the captured pyramid component. */
