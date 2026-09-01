@@ -59,4 +59,23 @@ export const texts = {
   assist: 'Harmonie-Anzeige',
   start: 'Spiel starten',
   ruleSet: 'Regelfassung',
+  loading: 'Lädt …',
+  apiError: (detail: string) => `Der Server antwortet nicht (${detail}). Das Spiel läuft weiter, die Ablage wird später nachgeholt.`,
+  middles: 'Middles',
+  middlesIntro: (side: Side) =>
+    `${sideName[side]} am Zug. Zwei Steine einer Harmonie stehen schon. Finde das Feld, auf dem der mittlere Stein sie mit einem Zug vollendet.`,
+  middlesTap: 'Tippe den Stein, dann das Zielfeld.',
+  middlesWrong: (n: number) => `Keine Harmonie. Versuch ${n}.`,
+  middlesSolved: (kinds: readonly string[], values: readonly number[], tries: number) =>
+    `Gelöst mit Versuch ${tries}: ${values.join(' · ')}, ${kinds.join(' und ')}.`,
+  middlesGiveUp: 'Auflösen',
+  middlesGaveUp: 'Aufgelöst. Morgen gibt es ein neues Rätsel.',
+  middlesAlready: 'Das heutige Rätsel hast du schon gespielt. Morgen gibt es ein neues.',
+  middlesSolution: (from: string, to: string, values: readonly number[], kinds: readonly string[]) =>
+    `Lösung: ${from} nach ${to}, ${values.join(' · ')}, ${kinds.join(' und ')}.`,
+  distributionTitle: (attempts: number, solved: number) => `Verteilung: ${solved} von ${attempts} gelöst, nach Versuchen`,
+  distributionUnavailable: 'Verteilung gerade nicht verfügbar.',
+  distributionOffline: 'Ohne Server keine Verteilung. Das Rätsel wurde lokal erzeugt.',
+  offlineNote: 'Offline-Rätsel, lokal erzeugt und mit dem Solver geprüft.',
+  difficulty: ['leicht', 'mittel', 'schwer'] as const,
 } as const;

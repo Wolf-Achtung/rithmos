@@ -4,14 +4,54 @@
  * over weeks, never as a single value (CLAUDE.md section 6).
  */
 export interface CoverageRecord {
+  /** Client-generated UUID; the API stores records idempotently by it. */
+  readonly id: string;
   /** Unix milliseconds. */
   readonly t: number;
   /** 0..1 for one move. */
   readonly coverage: number;
   readonly assist: number;
+  readonly device?: string;
+  /** True once the API has the record. */
+  readonly synced?: boolean;
 }
 
 export const WINDOW = 50;
+
+/** UUID v4 from Math.random: an idempotency key, not a secret. */
+export function newRecordId(): string {
+  const hex = '0123456789abcdef';
+  let out = '';
+  for (let i = 0; i < 36; i++) {
+    if (i === 8 || i === 13 || i === 18 || i === 23) out += '-';
+    else if (i === 14) out += '4';
+    else if (i === 19) out += hex[8 + Math.floor(Math.random() * 4)];
+    else out += hex[Math.floor(Math.random() * 16)];
+  }
+  return out;
+}
+
+/** Records written before ids existed get one now. */
+export function withIds(records: readonly Partial<CoverageRecord>[]): CoverageRecord[] {
+  return records
+    .filter((r) => typeof r.t === 'number' && typeof r.coverage === 'number')
+    .map((r) => ({
+      id: r.id ?? newRecordId(),
+      t: r.t!,
+      coverage: r.coverage!,
+      assist: r.assist ?? 0,
+      ...(r.device ? { device: r.device } : {}),
+      ...(r.synced ? { synced: true } : {}),
+    }));
+}
+
+/** Union by id; remote records count as synced. Sorted by time. */
+export function mergeRecords(local: readonly CoverageRecord[], remote: readonly CoverageRecord[]): CoverageRecord[] {
+  const byId = new Map<string, CoverageRecord>();
+  for (const r of local) byId.set(r.id, r);
+  for (const r of remote) byId.set(r.id, { ...(byId.get(r.id) ?? r), ...r, synced: true });
+  return [...byId.values()].sort((a, b) => a.t - b.t);
+}
 
 /** Mean over the last `WINDOW` scored moves, or null without records. */
 export function windowAverage(records: readonly CoverageRecord[], window = WINDOW): number | null {
