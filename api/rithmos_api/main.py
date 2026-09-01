@@ -1,0 +1,43 @@
+"""Application factory. The engine lives in the app; this service stores and serves."""
+
+from __future__ import annotations
+
+from contextlib import asynccontextmanager
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+from .db import make_pool
+from .routers import health
+from .settings import Settings
+
+
+def create_app(settings: Settings | None = None) -> FastAPI:
+    settings = settings or Settings.from_env()
+
+    @asynccontextmanager
+    async def lifespan(app: FastAPI):
+        app.state.pool = make_pool(settings.database_url)
+        try:
+            yield
+        finally:
+            app.state.pool.close()
+
+    app = FastAPI(title="Rithmos API", version="0.1.0", lifespan=lifespan)
+    app.state.settings = settings
+    if settings.cors_origins:
+        app.add_middleware(
+            CORSMiddleware,
+            allow_origins=list(settings.cors_origins),
+            allow_methods=["*"],
+            allow_headers=["*"],
+        )
+    app.include_router(health.router)
+    return app
+
+
+def __getattr__(name: str):
+    # uvicorn imports rithmos_api.main:app; tests build their own app with create_app()
+    if name == "app":
+        return create_app()
+    raise AttributeError(name)
