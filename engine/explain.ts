@@ -14,10 +14,11 @@ import {
   siegeCaptures,
   targetValues,
   blockingPieces,
+  liberatingMove,
 } from './capture';
 import type { Capture, CaptureMethod } from './capture';
-import { applyMove, canReach, legalMoves, legalMovesOf, regularDirections } from './moves';
-import { inBounds, opponent, pieceAt } from './board';
+import { canReach, legalMovesOf, regularDirections } from './moves';
+import { inBounds, pieceAt } from './board';
 import type { PieceId, PlacedPiece, Position, Side } from './types';
 
 export interface CaptureAttempt {
@@ -177,11 +178,9 @@ function explainSiege(pos: Position, side: Side, attempt: CaptureAttempt, target
   if (!blockingPieces(pos, target).some((p) => p.side === side)) {
     return { method, holds: false, failure: { code: 'no_besieger', method } };
   }
-  for (const m of legalMoves(pos, opponent(side))) {
-    if (m.pieceId === target.id) continue;
-    if (legalMovesOf(applyMove(pos, m), target).length > 0) {
-      return { method, holds: false, failure: { code: 'target_can_be_freed', method, by: m.pieceId } };
-    }
+  const freeing = liberatingMove(pos, target);
+  if (freeing) {
+    return { method, holds: false, failure: { code: 'target_can_be_freed', method, by: freeing.pieceId } };
   }
   // Declared besiegers are not among the blockers.
   const offender = attempt.by.find((id) => !blockingPieces(pos, target).some((p) => p.id === id)) ?? attempt.by[0] ?? '';

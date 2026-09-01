@@ -5,8 +5,8 @@
  * Captures are enumerated against a position; when they are declared is a
  * rule datum (rules.captureTiming), handled by game.ts.
  */
-import { inBounds, opponent, pieceAt, piecesOf, replacePiece, requirePiece } from './board';
-import { applyMove, canReach, directionsFor, legalMoves, legalMovesOf, movementShapes, regularDirections } from './moves';
+import { inBounds, opponent, pieceAt, piecesOf, replacePiece, requirePiece, squareIndex } from './board';
+import { applyMove, directionsFor, legalMovesOf, movementShapes, reachableSquares, regularDirections } from './moves';
 import type { Move } from './moves';
 import type { PieceId, PlacedPiece, Position, Side } from './types';
 
@@ -73,6 +73,17 @@ function withComponent(capture: Omit<Capture, 'component'>, tv: TargetValue): Ca
   return tv.component === undefined ? capture : { ...capture, component: tv.component };
 }
 
+/** Squares (as grid indices) each own piece could reach next move, enemy-occupied targets included. */
+function reachIndex(pos: Position, side: Side): Map<PieceId, Set<number>> {
+  const out = new Map<PieceId, Set<number>>();
+  for (const a of piecesOf(pos, side)) {
+    const set = new Set<number>();
+    for (const r of reachableSquares(pos, a, { allowEnemyTarget: true })) set.add(squareIndex(pos.rules, r.square));
+    out.set(a.id, set);
+  }
+  return out;
+}
+
 /**
  * Meeting: an own piece could, by its next regular move, land on the square of
  * an enemy piece of equal value.
@@ -80,9 +91,10 @@ function withComponent(capture: Omit<Capture, 'component'>, tv: TargetValue): Ca
 export function meetingCaptures(pos: Position, side: Side): Capture[] {
   const out: Capture[] = [];
   const enemies = piecesOf(pos, opponent(side));
+  const reach = reachIndex(pos, side);
   for (const a of piecesOf(pos, side)) {
     for (const b of enemies) {
-      if (!canReach(pos, a, b.square, { allowEnemyTarget: true })) continue;
+      if (!reach.get(a.id)!.has(squareIndex(pos.rules, b.square))) continue;
       for (const tv of targetValues(pos, b)) {
         if (tv.value === a.value) {
           out.push(withComponent({ method: 'meeting', by: [a.id], target: b.id, detail: { method: 'meeting', value: a.value } }, tv));
@@ -121,8 +133,10 @@ const MAX_AMBUSH_GROUP = 4;
 export function ambushCaptures(pos: Position, side: Side): Capture[] {
   const out: Capture[] = [];
   const own = piecesOf(pos, side);
+  const reach = reachIndex(pos, side);
   for (const b of piecesOf(pos, opponent(side))) {
-    const attackers = own.filter((a) => canReach(pos, a, b.square, { allowEnemyTarget: true }));
+    const key = squareIndex(pos.rules, b.square);
+    const attackers = own.filter((a) => reach.get(a.id)!.has(key));
     if (attackers.length < 2) continue;
     const tvs = targetValues(pos, b);
     for (let size = 2; size <= Math.min(MAX_AMBUSH_GROUP, attackers.length); size++) {
@@ -215,6 +229,21 @@ export function blockingPieces(pos: Position, piece: PlacedPiece): PlacedPiece[]
 }
 
 /**
+ * A single move by one of the target's own pieces that gives the target a
+ * move again, or null. Only a blocker of the target's own side can free it,
+ * so only those pieces are tried.
+ */
+export function liberatingMove(pos: Position, target: PlacedPiece): Move | null {
+  for (const blocker of blockingPieces(pos, target)) {
+    if (blocker.side !== target.side) continue;
+    for (const m of legalMovesOf(pos, blocker)) {
+      if (legalMovesOf(applyMove(pos, m), target).length > 0) return m;
+    }
+  }
+  return null;
+}
+
+/**
  * Siege: the enemy piece can neither move nor be freed by a single move of
  * one of its own side's pieces. At least one of the blockers must belong to
  * the besieging side (board edges and the target's own pieces do not besiege
@@ -222,22 +251,11 @@ export function blockingPieces(pos: Position, piece: PlacedPiece): PlacedPiece[]
  */
 export function siegeCaptures(pos: Position, side: Side): Capture[] {
   const out: Capture[] = [];
-  const enemySide = opponent(side);
-  let friendlyMoves: Move[] | null = null;
-  for (const b of piecesOf(pos, enemySide)) {
+  for (const b of piecesOf(pos, opponent(side))) {
     if (legalMovesOf(pos, b).length > 0) continue;
     const besiegers = blockingPieces(pos, b).filter((p) => p.side === side);
     if (besiegers.length === 0) continue;
-    friendlyMoves ??= legalMoves(pos, enemySide);
-    let freeable = false;
-    for (const m of friendlyMoves) {
-      if (m.pieceId === b.id) continue;
-      if (legalMovesOf(applyMove(pos, m), b).length > 0) {
-        freeable = true;
-        break;
-      }
-    }
-    if (freeable) continue;
+    if (liberatingMove(pos, b)) continue;
     out.push({ method: 'siege', by: besiegers.map((p) => p.id), target: b.id, detail: { method: 'siege' } });
   }
   return out;

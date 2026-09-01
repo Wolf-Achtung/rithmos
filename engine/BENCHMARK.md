@@ -19,7 +19,7 @@ Machine: Intel Xeon @ 2.80 GHz (4 vCPU container), Node 22.22.2, Vitest 4.1.11.
 | `reachableHarmoniesBrute` within 1 move, both sides (reference) | 13.9 ms | 72 |
 | `reachableHarmonies` within 2 moves, white | 14.7 ms | 68 |
 | `legalMoves`, both sides | 0.03 ms | 30 353 |
-| `findCaptures`, both sides | 1.80 ms | 554 |
+| `findCaptures`, both sides | 0.22 ms | 4 600 |
 
 ## Reading
 
@@ -31,9 +31,10 @@ Machine: Intel Xeon @ 2.80 GHz (4 vCPU container), Node 22.22.2, Vitest 4.1.11.
   therefore orders moves by static evaluation and keeps a beam
   (`search.ts`, parameter `breadth`), which brings depth 3 into the range of
   a few hundred milliseconds.
-- `findCaptures` is dominated by the siege check, which plays every enemy
-  move to test liberation. The search evaluation does not need it on every
-  node; it uses the cheap methods and checks sieges only on the chosen line.
+- `findCaptures` started at 1.80 ms. Two changes brought it to 0.22 ms:
+  reach sets are computed once per piece instead of once per piece pair, and
+  the siege liberation check tries only the moves of the target's own
+  blockers, which are the only moves that can free it.
 - Depth 2 of `reachableHarmonies` is for claim verification
   (`harmony_reachable`, `withinMoves: 2`), never for the search.
 
