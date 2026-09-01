@@ -8,7 +8,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "bench": "vitest bench --run",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "app:web": "npm --workspace app run web",
+    "app:export": "npm --workspace app run export:web"
   },
   "engines": {
     "node": ">=20"
@@ -17,5 +19,8 @@
     "@types/node": "^22.0.0",
     "typescript": "^5.9.3",
     "vitest": "^4.1.11"
-  }
+  },
+  "workspaces": [
+    "app"
+  ]
 }
