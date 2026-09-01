@@ -13,5 +13,5 @@
     "types": ["node"],
     "isolatedModules": true
   },
-  "include": ["engine/**/*.ts", "vitest.config.ts"]
+  "include": ["engine/**/*.ts", "jobs/src/**/*.ts", "vitest.config.ts"]
 }

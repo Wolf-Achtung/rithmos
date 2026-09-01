@@ -10,7 +10,8 @@
     "bench": "vitest bench --run",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "app:web": "npm --workspace app run web",
-    "app:export": "npm --workspace app run export:web"
+    "app:export": "npm --workspace app run export:web",
+    "jobs:build": "rolldown jobs/src/generate.ts --platform node --format esm --dir jobs/dist"
   },
   "engines": {
     "node": ">=20"

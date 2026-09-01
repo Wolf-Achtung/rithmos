@@ -1,0 +1,1 @@
+web: python -m rithmos_api.migrate && uvicorn rithmos_api.main:app --host 0.0.0.0 --port ${PORT:-8000}
