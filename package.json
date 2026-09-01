@@ -1,0 +1,21 @@
+{
+  "name": "rithmos",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Rithmos - mobile game after the medieval Rithmomachia (Mebben after Selenus 1616). Engine in pure TypeScript.",
+  "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "bench": "vitest bench --run",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.11"
+  }
+}
