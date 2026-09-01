@@ -3,11 +3,11 @@ import { harmonyApplications } from '../../../engine/rules/applications';
 import { mebben } from '../../../engine/rules/mebben';
 import type { SimpleShape } from '../../../engine/types';
 import { kindName } from '../texts';
+import { movementWording } from './rulesText';
 import { colors, spacing } from '../theme';
 
 const shapeName: Record<SimpleShape, string> = { round: 'Runde', triangle: 'Dreieck', square: 'Quadrat' };
 const directionName = { orthogonal: 'gerade, nicht diagonal', diagonal: 'ausschließlich diagonal', all: 'alle Richtungen' } as const;
-const ordinal = ['', 'zweite', 'dritte', 'vierte', 'fünfte'];
 
 const white = mebben.setup.white.pyramid.components.map((c) => c.value);
 const black = mebben.setup.black.pyramid.components.map((c) => c.value);
@@ -28,7 +28,7 @@ export function RulesScreen() {
         {(Object.keys(mebben.movement) as SimpleShape[]).map((shape) => {
           const m = mebben.movement[shape];
           return (
-            <Row key={shape} a={shapeName[shape]} b={`ins ${ordinal[m.steps + 1]} Feld`} c={`${m.steps} ${m.steps === 1 ? 'Schritt' : 'Schritte'}, ${directionName[m.directions]}`} />
+            <Row key={shape} a={shapeName[shape]} b={movementWording(m)} c={`${m.steps} ${m.steps === 1 ? 'Schritt' : 'Schritte'}, ${directionName[m.directions]}`} />
           );
         })}
         <Row a="Pyramide" b="—" c="nach ihren Bestandteilen" />
