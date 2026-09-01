@@ -1,0 +1,25 @@
+export const colors = {
+  background: '#f6f1e7',
+  surface: '#fffdf8',
+  ink: '#2b2118',
+  muted: '#7a6a5c',
+  border: '#d9cdb8',
+  squareLight: '#efe6d3',
+  squareDark: '#d9c9a8',
+  enemyHalfTint: 'rgba(120, 90, 40, 0.06)',
+  whitePiece: '#fbf7ef',
+  whitePieceInk: '#2b2118',
+  blackPiece: '#3a2f27',
+  blackPieceInk: '#fbf7ef',
+  selected: '#e0a83a',
+  target: 'rgba(60, 130, 90, 0.45)',
+  lastMove: 'rgba(224, 168, 58, 0.35)',
+  marked: 'rgba(70, 110, 200, 0.45)',
+  harmony: 'rgba(120, 60, 180, 0.45)',
+  attacker: 'rgba(200, 60, 60, 0.5)',
+  accent: '#7a4a1e',
+  danger: '#a33',
+  ok: '#2e7d4f',
+} as const;
+
+export const spacing = { xs: 4, sm: 8, md: 12, lg: 20 } as const;
