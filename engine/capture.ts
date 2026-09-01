@@ -6,7 +6,7 @@
  * rule datum (rules.captureTiming), handled by game.ts.
  */
 import { inBounds, opponent, pieceAt, piecesOf, replacePiece, requirePiece } from './board';
-import { applyMove, canReach, directionsFor, legalMoves, legalMovesOf, movementShapes } from './moves';
+import { applyMove, canReach, directionsFor, legalMoves, legalMovesOf, movementShapes, regularDirections } from './moves';
 import type { Move } from './moves';
 import type { PieceId, PlacedPiece, Position, Side } from './types';
 
@@ -151,6 +151,42 @@ export function ambushCaptures(pos: Position, side: Side): Capture[] {
 }
 
 /**
+ * Assault: an own piece looks along one of its regular directions over
+ * `distance` empty squares at an enemy piece, and its value times or divided
+ * by that distance equals the enemy's value. The distance is not limited by the
+ * move length. Zero empty squares between them is never an assault (that would
+ * be a meeting), and a division must come out even.
+ */
+export function assaultCaptures(pos: Position, side: Side): Capture[] {
+  const out: Capture[] = [];
+  for (const a of piecesOf(pos, side)) {
+    for (const d of regularDirections(pos, a)) {
+      let sq = a.square;
+      let distance = 0;
+      for (;;) {
+        sq = { file: sq.file + d.df, rank: sq.rank + d.dr };
+        if (!inBounds(pos.rules, sq)) break;
+        const occupant = pieceAt(pos, sq);
+        if (!occupant) {
+          distance++;
+          continue;
+        }
+        if (occupant.side === side || distance === 0) break;
+        for (const tv of targetValues(pos, occupant)) {
+          if (a.value * distance === tv.value) {
+            out.push(withComponent({ method: 'assault', by: [a.id], target: occupant.id, detail: { method: 'assault', value: a.value, distance, operation: 'times', result: a.value * distance } }, tv));
+          } else if (a.value % distance === 0 && a.value / distance === tv.value) {
+            out.push(withComponent({ method: 'assault', by: [a.id], target: occupant.id, detail: { method: 'assault', value: a.value, distance, operation: 'divided', result: a.value / distance } }, tv));
+          }
+        }
+        break;
+      }
+    }
+  }
+  return out;
+}
+
+/**
  * Pieces standing in the way of `piece`: the first occupant on each regular
  * path, within the reach of the piece. Includes pieces of both sides.
  */
@@ -209,7 +245,12 @@ export function siegeCaptures(pos: Position, side: Side): Capture[] {
 
 /** All captures available to `side` in this position, every method. */
 export function findCaptures(pos: Position, side: Side): Capture[] {
-  return [...meetingCaptures(pos, side), ...ambushCaptures(pos, side), ...siegeCaptures(pos, side)];
+  return [
+    ...meetingCaptures(pos, side),
+    ...ambushCaptures(pos, side),
+    ...assaultCaptures(pos, side),
+    ...siegeCaptures(pos, side),
+  ];
 }
 
 /** Remove the captured piece, or the captured pyramid component. */
