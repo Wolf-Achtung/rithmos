@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useReducer } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { pieceById, squareIndex } from '../../../engine/board';
+import { playTurn } from '../../../engine/game';
+import { chooseMove, STRENGTH_PRESETS } from '../../../engine/search';
 import { Board } from '../components/Board';
 import type { Highlights } from '../components/Board';
 import { availableCaptureTargets, harmonySquares, legalTargets, newGame, reduce } from '../game/store';
@@ -21,6 +23,21 @@ export function GameScreen({ settings, onNewGame }: Props) {
   useEffect(() => {
     dispatch({ type: 'new_game', settings });
   }, [settings]);
+
+  // The opponent runs on the JS thread after the UI has shown "thinking".
+  useEffect(() => {
+    if (state.phase !== 'opponent') return;
+    const pos = state.position;
+    const id = setTimeout(() => {
+      const r = chooseMove(pos, { ...STRENGTH_PRESETS[settings.strength], seed: (Date.now() ^ state.turnNumber) & 0xffff });
+      if (!r) {
+        dispatch({ type: 'opponent_passed' });
+        return;
+      }
+      dispatch({ type: 'opponent_played', turn: r.turn, result: playTurn(pos, r.turn) });
+    }, 60);
+    return () => clearTimeout(id);
+  }, [state.phase, state.position, state.turnNumber, settings.strength]);
 
   const highlights = useMemo<Highlights>(() => {
     const pos = state.position;
