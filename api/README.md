@@ -1,7 +1,7 @@
 # api
 
 FastAPI service for Rithmos: anonymous accounts, coverage sync across devices, daily Middles puzzles.
-The engine never runs here; puzzles arrive verified from `jobs/`, the server compares moves with the
+The engine never runs here; puzzles arrive verified from `jobs/`, the server compares a move or a triad answer with the
 stored solution.
 
 ```
@@ -26,7 +26,7 @@ in the repository root).
 | PUT | `/v1/coverage` | bearer | idempotent upload of coverage records (client ids) |
 | GET | `/v1/coverage` | bearer | all records of the account, oldest first |
 | GET | `/v1/puzzles/today`, `/v1/puzzles/{date}` | optional | the puzzle without its solution |
-| POST | `/v1/puzzles/{date}/attempts` | bearer | the one attempt; returns solved, solution, harmony, distribution |
+| POST | `/v1/puzzles/{date}/attempts` | bearer | the one attempt, as `move` (board) or `answer` (triad); returns solved, solution, harmony, distribution |
 | GET | `/v1/puzzles/{date}/distribution` | – | attempts, solved, histogram of tries |
 | POST | `/v1/admin/puzzles` | `x-jobs-token` | ingestion from the nightly job |
 

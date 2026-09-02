@@ -8,7 +8,7 @@
  */
 import { isEnemyHalf, place, squareName } from '../../engine/board';
 import type { PieceInput } from '../../engine/board';
-import { findHarmonies, harmonyKinds } from '../../engine/harmony';
+import { HARMONY_KINDS, findHarmonies, harmonyKinds, meanOf } from '../../engine/harmony';
 import type { HarmonyKind } from '../../engine/harmony';
 import { reachableSquares } from '../../engine/moves';
 import { mebben } from '../../engine/rules/mebben';
@@ -23,16 +23,39 @@ export interface PuzzlePiece {
   readonly square: string;
 }
 
+/**
+ * The puzzle without the board (CLAUDE.md, Stufe 1): two numbers stand, the
+ * middle is missing, four offers. The offers always contain the other means
+ * of a and c when they are whole numbers, so a wrong tap tells which mean
+ * the player had in mind.
+ */
+export interface Triad {
+  readonly kind: HarmonyKind;
+  readonly a: number;
+  readonly c: number;
+  /** four offers, shuffled; exactly one is the answer */
+  readonly options: readonly number[];
+}
+
 export interface MiddlesPuzzle {
   readonly date: string;
   readonly seed: number;
   readonly side: Side;
   readonly pieces: readonly PuzzlePiece[];
   readonly goal: { readonly kind: 'harmony' };
-  readonly solution: { readonly pieceId: PieceId; readonly from: string; readonly to: string };
+  readonly solution: { readonly pieceId: PieceId; readonly from: string; readonly to: string; readonly b: number };
   readonly harmony: { readonly kinds: readonly HarmonyKind[]; readonly values: readonly number[] };
-  /** 1 easy .. 3 hard */
+  /** 1 easy .. 3 hard, for the board form */
   readonly difficulty: 1 | 2 | 3;
+  readonly triad: Triad;
+}
+
+/** Nº 1 is the first day Middles exists; the number counts days from there. */
+export const MIDDLES_EPOCH = '2026-09-01';
+
+export function middlesNumber(date: string): number {
+  const days = Math.round((Date.parse(`${date}T00:00:00Z`) - Date.parse(`${MIDDLES_EPOCH}T00:00:00Z`)) / 86_400_000);
+  return days + 1;
 }
 
 // ---------------------------------------------------------------------------
@@ -137,8 +160,11 @@ function randomSquare(rnd: () => number, taken: Set<string>, pred: (sq: Square) 
   return null;
 }
 
-/** Try to build one puzzle from a seed. Null when the attempt does not verify. */
-export function tryBuild(date: string, seed: number, rnd: () => number): MiddlesPuzzle | null {
+/** The board form alone, before the triad is attached. */
+type BoardPuzzle = Omit<MiddlesPuzzle, 'triad' | 'solution'> & { readonly solution: Omit<MiddlesPuzzle['solution'], 'b'> };
+
+/** Try to build one board puzzle from a seed. Null when the attempt does not verify. */
+export function tryBuild(date: string, seed: number, rnd: () => number): BoardPuzzle | null {
   const side: Side = rnd() < 0.5 ? 'white' : 'black';
   const enemy: Side = side === 'white' ? 'black' : 'white';
   const triples = harmonicTriples(side);
@@ -200,19 +226,99 @@ export function tryBuild(date: string, seed: number, rnd: () => number): Middles
   };
 }
 
+// ---------------------------------------------------------------------------
+// The triad: numbers only.
+
+/**
+ * Bounds per kind. The stones of the rule set give too few musical triples
+ * (two among white, none among black), so the triad draws from plain numbers.
+ * Small enough to hold in the head, large enough that the answer is not read
+ * off at a glance. c is at most four times a: the chord of the three numbers
+ * (frequencies in the ratio a : b : c) then spans at most two octaves.
+ */
+const TRIAD_BOUNDS: Record<HarmonyKind, { readonly maxC: number; readonly minSpan: number }> = {
+  arithmetic: { maxC: 40, minSpan: 4 },
+  geometric: { maxC: 64, minSpan: 3 },
+  musical: { maxC: 60, minSpan: 3 },
+};
+export const TRIAD_MAX_RATIO = 4;
+
+/** All a < b < c of a kind within its bounds, b a whole number. */
+export function triadCandidates(kind: HarmonyKind): { a: number; b: number; c: number }[] {
+  const { maxC, minSpan } = TRIAD_BOUNDS[kind];
+  const out: { a: number; b: number; c: number }[] = [];
+  for (let a = 2; a <= maxC; a++)
+    for (let c = a + minSpan; c <= Math.min(maxC, a * TRIAD_MAX_RATIO); c++) {
+      const b = meanOf(kind, a, c);
+      if (b !== null) out.push({ a, b, c });
+    }
+  return out;
+}
+
+function shuffle<T>(items: T[], rnd: () => number): T[] {
+  for (let i = items.length - 1; i > 0; i--) {
+    const j = Math.floor(rnd() * (i + 1));
+    [items[i], items[j]] = [items[j]!, items[i]!];
+  }
+  return items;
+}
+
+/** The four offers for a triad: the answer, the other whole-number means, fillers. */
+export function triadOptions(kind: HarmonyKind, a: number, b: number, c: number, rnd: () => number): number[] {
+  const used = new Set<number>([a, b, c]);
+  const options = [b];
+  for (const other of HARMONY_KINDS) {
+    if (other === kind) continue;
+    const m = meanOf(other, a, c);
+    if (m !== null && !used.has(m)) {
+      options.push(m);
+      used.add(m);
+    }
+  }
+  // fillers from between a and c first, then just outside
+  const between: number[] = [];
+  for (let v = a + 1; v < c; v++) if (!used.has(v)) between.push(v);
+  const outside: number[] = [];
+  for (let d = 1; outside.length < 8; d++) {
+    if (a - d >= 1) outside.push(a - d);
+    outside.push(c + d);
+  }
+  const fillers = [...shuffle(between, rnd), ...outside];
+  while (options.length < 4 && fillers.length > 0) options.push(fillers.shift()!);
+  return shuffle(options, rnd);
+}
+
+/** The triad of a date. Its own random stream, so the board form stays as it was. */
+export function generateTriad(date: string): Triad & { readonly b: number } {
+  const rnd = mulberry32((seedForDate(date) ^ 0x9e3779b9) >>> 0);
+  const kind = HARMONY_KINDS[Math.floor(rnd() * HARMONY_KINDS.length)]!;
+  const candidates = triadCandidates(kind);
+  const { a, b, c } = candidates[Math.floor(rnd() * candidates.length)]!;
+  return { kind, a, b, c, options: triadOptions(kind, a, b, c, rnd) };
+}
+
 /** The puzzle for a date. Tries seeds derived from the date until one verifies. */
 export function generateMiddles(date: string, maxAttempts = 500): MiddlesPuzzle {
   const base = seedForDate(date);
   for (let i = 0; i < maxAttempts; i++) {
     const seed = (base + i * 7919) >>> 0;
-    const puzzle = tryBuild(date, seed, mulberry32(seed));
-    if (puzzle) return puzzle;
+    const board = tryBuild(date, seed, mulberry32(seed));
+    if (board) {
+      const { b, ...triad } = generateTriad(date);
+      return { ...board, solution: { ...board.solution, b }, triad };
+    }
   }
   throw new Error(`no verifiable Middles puzzle for ${date} within ${maxAttempts} attempts`);
 }
 
-/** Re-check a puzzle with the solver: unique, and the stored solution is the one. */
+/** Re-check a puzzle: the board form with the solver, the triad by recognition. */
 export function verifyMiddles(puzzle: MiddlesPuzzle): { valid: boolean; reason: string } {
+  const { triad, solution } = puzzle;
+  if (harmonyKinds(triad.a, solution.b, triad.c).join() !== triad.kind) return { valid: false, reason: 'triad is not the stated harmony' };
+  if (triad.options.length !== 4 || new Set(triad.options).size !== 4) return { valid: false, reason: 'triad needs four distinct offers' };
+  if (!triad.options.includes(solution.b)) return { valid: false, reason: 'triad offers lack the answer' };
+  if (triad.options.some((v) => v !== solution.b && harmonyKinds(triad.a, v, triad.c).includes(triad.kind))) return { valid: false, reason: 'a second offer closes the harmony' };
+
   const position = place(
     puzzle.pieces.map((p) => ({ id: p.id, side: p.side, shape: p.shape, value: p.value, at: p.square })),
     puzzle.side,
@@ -221,7 +327,7 @@ export function verifyMiddles(puzzle: MiddlesPuzzle): { valid: boolean; reason: 
   if (result.solutions.length === 0) return { valid: false, reason: 'no solution' };
   if (!result.unique) return { valid: false, reason: `${result.solutions.length} solutions` };
   const move = result.solutions[0]!.turns[0]!.move;
-  const ok = move.pieceId === puzzle.solution.pieceId && squareName(move.from) === puzzle.solution.from && squareName(move.to) === puzzle.solution.to;
+  const ok = move.pieceId === solution.pieceId && squareName(move.from) === solution.from && squareName(move.to) === solution.to;
   return ok ? { valid: true, reason: 'unique and as stored' } : { valid: false, reason: 'solution differs from the stored one' };
 }
 

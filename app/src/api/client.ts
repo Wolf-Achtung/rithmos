@@ -66,11 +66,20 @@ export interface PuzzlePiece {
   readonly square: string;
 }
 
+export interface PuzzleTriad {
+  readonly kind: HarmonyKind;
+  readonly a: number;
+  readonly c: number;
+  readonly options: readonly number[];
+}
+
 export interface Puzzle {
   readonly date: string;
   readonly side: Side;
   readonly difficulty: number;
   readonly pieces: readonly PuzzlePiece[];
+  /** null for puzzles ingested before the board-less form existed */
+  readonly triad: PuzzleTriad | null;
   readonly attempted: boolean;
 }
 
@@ -89,10 +98,13 @@ export interface PuzzleMove {
 
 export interface AttemptResult {
   readonly solved: boolean;
-  readonly solution: PuzzleMove;
+  readonly solution: PuzzleMove & { readonly b: number | null };
   readonly harmony: { readonly kinds: readonly HarmonyKind[]; readonly values: readonly number[] };
   readonly distribution: Distribution;
 }
+
+/** The one attempt of the day: a board move, or the tapped middle of the triad. */
+export type Attempt = { readonly move: PuzzleMove; readonly tries: number } | { readonly answer: number; readonly tries: number };
 
 /** Today's puzzle, or null when the API has none. */
 export async function fetchTodayPuzzle(session: Session | null): Promise<Puzzle | null> {
@@ -104,8 +116,8 @@ export async function fetchTodayPuzzle(session: Session | null): Promise<Puzzle 
   }
 }
 
-export async function submitAttempt(session: Session, date: string, move: PuzzleMove, tries: number, seconds: number): Promise<AttemptResult> {
-  return request(`/v1/puzzles/${date}/attempts`, { method: 'POST', body: { move, tries, seconds }, token: session.token });
+export async function submitAttempt(session: Session, date: string, attempt: Attempt, seconds: number): Promise<AttemptResult> {
+  return request(`/v1/puzzles/${date}/attempts`, { method: 'POST', body: { ...attempt, seconds }, token: session.token });
 }
 
 export async function fetchDistribution(date: string): Promise<Distribution> {

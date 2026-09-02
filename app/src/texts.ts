@@ -78,4 +78,72 @@ export const texts = {
   distributionOffline: 'Ohne Server keine Verteilung. Das Rätsel wurde lokal erzeugt.',
   offlineNote: 'Offline-Rätsel, lokal erzeugt und mit dem Solver geprüft.',
   difficulty: ['leicht', 'mittel', 'schwer'] as const,
+
+  // Middles without the board (Stufe 1). One sentence per screen.
+  triadNumber: (n: number) => `Nº ${n}`,
+  triadStreak: (days: number) => (days === 1 ? '1 Tag in Folge' : `${days} Tage in Folge`),
+  triadQuestion: (kind: HarmonyKind) => `Welche Zahl macht die Reihe ${kindName[kind]}?`,
+  triadTry: (n: number, max: number) => `Versuch ${n} von ${max}`,
+  triadOtherMean: (answer: number, mean: HarmonyKind) => `${answer} ist das ${meanName[mean]} — hier ist eine andere Harmonie gefragt.`,
+  triadWrong: (answer: number) => `${answer} macht keine Harmonie aus den dreien.`,
+  triadRevealed: (b: number) => `Die Mitte war ${b}. Morgen gibt es eine neue.`,
+  triadPlayedToday: 'Heute schon gespielt. Morgen gibt es eine neue Mitte.',
+  triadListen: 'Dreiklang anhören',
+  triadShare: 'Teilen',
+  triadCopied: 'Kopiert.',
+  triadScore: (n: number, tries: number | null, max: number) => `Nº ${n} · ${tries === null ? 'X' : tries}/${max}`,
+  triadDistribution: (attempts: number, solved: number) => (attempts === 0 ? 'Du bist heute die erste Person.' : `${solved} von ${attempts} haben es heute gelöst.`),
+  triadOffline: 'Ohne Server: das Rätsel kommt aus dem Gerät.',
+  intervalName: {
+    unison: 'Grundton',
+    minorThird: 'kleine Terz',
+    majorThird: 'große Terz',
+    fourth: 'Quarte',
+    fifth: 'Quinte',
+    octave: 'Oktave',
+    twelfth: 'Oktave und Quinte',
+    doubleOctave: 'zwei Oktaven',
+  } as const,
+  settings: 'Einstellungen',
+  settingsSound: 'Klang',
+  settingsTheme: 'Erscheinung',
+  themeName: { dark: 'Dunkel', light: 'Hell' } as const,
+  on: 'An',
+  off: 'Aus',
+  close: 'Schließen',
+  ruleSetNote: (name: string, source: string) => `Regelfassung: ${name}. Quelle: ${source}`,
 } as const;
+
+export const meanName: Record<HarmonyKind, string> = {
+  arithmetic: 'arithmetische Mittel',
+  geometric: 'geometrische Mittel',
+  musical: 'harmonische Mittel',
+};
+
+/**
+ * The one sentence after solving: where this mean sits in the world today.
+ * Fixed text until the narrator (Stufe 3) takes over; the applications come
+ * from engine/rules/applications.ts, three per kind, rotated by day.
+ */
+export function triadSentence(kind: HarmonyKind, a: number, b: number, c: number, variant: number): string {
+  const lead = `${b} ist das ${meanName[kind]} von ${a} und ${c}`;
+  const uses: Record<HarmonyKind, readonly string[]> = {
+    arithmetic: [
+      `${lead} — der Durchschnitt, den du aus jeder Messreihe kennst: alles zusammen, geteilt durch die Anzahl.`,
+      `${lead} — genau so glättet ein gleitender Mittelwert eine Kurve, Punkt für Punkt.`,
+      `${lead} — dieselbe Rechnung, mit der aus Noten ein Schnitt wird.`,
+    ],
+    geometric: [
+      `${lead} — so rechnet man eine durchschnittliche Wachstumsrate: nicht addieren, sondern multiplizieren und die Wurzel ziehen.`,
+      `${lead} — Zinseszins über mehrere Jahre folgt genau dieser Proportion.`,
+      `${lead} — damit werden Verhältnisse vergleichbar gemacht, wenn die Größenordnungen weit auseinanderliegen.`,
+    ],
+    musical: [
+      `${lead} — so berechnet man die Durchschnittsgeschwindigkeit, wenn du hin ${a} und zurück ${c} fährst.`,
+      `${lead} — der F1-Score, mit dem Klassifikationsmodelle bewertet werden, ist genau dieses Mittel.`,
+      `${lead} — zwei Widerstände parallel geschaltet ergeben nach dieser Proportion ihren gemeinsamen Wert.`,
+    ],
+  };
+  const list = uses[kind];
+  return list[((variant % list.length) + list.length) % list.length]!;
+}
