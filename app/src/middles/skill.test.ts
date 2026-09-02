@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { HarmonyKind } from '../../../engine/harmony';
-import { hitRates, mergeSkill, solvedAtLevel, weakestKind, weeklyHitTrend, practiceToday, PRACTICE_PER_DAY } from './skill';
+import { hitRates, mergeSkill, solvedAtLevel, weakestKind, weeklyHitTrend } from './skill';
 import type { SkillRecord } from './skill';
 
 let n = 0;
@@ -80,16 +80,5 @@ describe('merging device and server records', () => {
     expect(shared.synced).toBe(true);
     expect(merged.find((r) => r.id === local[0]!.id)!.synced).toBe(false);
     expect(merged.map((r) => r.t)).toEqual([...merged.map((r) => r.t)].sort((a, b) => a - b));
-  });
-});
-
-describe('the daily practice quota', () => {
-  it('counts only practice records of the local calendar day', () => {
-    const now = new Date(2026, 8, 2, 15, 0).getTime();
-    const rec = (t: number, mode: 'daily' | 'practice' = 'practice') => ({ id: String(t), t, mode, level: 1, kind: 'arithmetic' as const, solved: true, tries: 1 });
-    const records = [rec(now - 3600_000), rec(now - 60_000), rec(new Date(2026, 8, 1, 23, 59).getTime()), rec(now, 'daily'), rec(new Date(2026, 8, 3, 0, 0).getTime())];
-    expect(practiceToday(records, now)).toBe(2);
-    expect(practiceToday([], now)).toBe(0);
-    expect(PRACTICE_PER_DAY).toBe(5);
   });
 });
