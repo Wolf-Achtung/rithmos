@@ -1,7 +1,9 @@
 # RITHMOS
 
 Mobilspiel nach dem mittelalterlichen Zahlenkampfspiel *Rithmomachia* — von ἀριθμός,
-der Zahl. Das Tagesrätsel heißt **Middles** und ist das Produkt.
+der Zahl. Das Tagesrätsel ist das Produkt und trägt den Namen des Spiels: **Rithmos**,
+erreichbar unter rithmos.de. (Der Arbeitsname „Middles“ entfiel im September 2026;
+im Code heißen die Module weiter `middles`.)
 
 Diese Datei ist die verbindliche Projektbeschreibung. Lies sie zu Beginn jeder
 Sitzung vollständig. Was hier steht, gilt; Abweichungen sind ein Wolf-Ping.
@@ -61,18 +63,18 @@ Rechenlast.
 | Stufe | Inhalt | Zustand |
 |---|---|---|
 | **0** | Engine, API, Konten, Generator, Deploy-Kette | fertig, bleibt unverändert |
-| **1** | **Middles ohne Brett.** Ein Rätsel am Tag, drei Versuche, teilbares Ergebnis, Dreiklang zum Anhören, ein Satz dazu, wo dieses Mittel heute in der Welt steckt (fester Text) | gebaut |
-| **2** | Progression: erst arithmetisch, dann geometrisch, dann musikalisch, dann gemischt („welches Mittel?"), dann vier Zahlen mit zwei Mitteln. Deckung je Mittelart über Wochen | **jetzt**, auf dem Gerät gebaut |
+| **1** | **Das Tagesrätsel ohne Brett.** Ein Rätsel am Tag, drei Versuche, teilbares Ergebnis, Dreiklang zum Anhören, ein Satz dazu, wo dieses Mittel heute in der Welt steckt (fester Text) | gebaut |
+| **2** | Progression: erst gleiche Schritte, dann gleiche Faktoren, dann Schritte wie die Außenzahlen, dann „welches Muster?", dann vier Zahlen mit zwei Mitteln. Deckung je Mittelart über Wochen. **Andere Sinne** (September 2026): in der Übung wird die Mitte wahlweise getippt (Zahl), als Länge gezogen (drei Balken, keine Zahl auf dem Schirm, das Auge entscheidet, ± 6 %) oder nach Gehör gestimmt (Ton). Rhythmus bewusst nicht: als Tippen sind nur gleiche Schritte hörbar | gebaut, auf dem Gerät |
 | **3** | Die Erzählerin: nach dem Lösen zwei Stimmen (Mönch, Analystin) und „Wer lügt?“ mit drei Erklärungen, eine stimmt. Der Generator liefert Wahrheit und Lügen als Fakten, das Modell formuliert, der Server prüft jede Zahl. Cachebar pro Rätsel, Tageslimit, AI-Act-Kennzeichnung | gebaut, Schlüssel auf Railway offen |
 | **4** | Das kleine Brett: 4 × 8, vier Steine je Seite (Weiß 2 · 4 · 6 · 8, Schwarz 3 · 6 · 9 · 12), nur die Begegnung, Sieg = eine Harmonie im gegnerischen Feld. Begründung vor dem Zug aus Engine-Angeboten, vier Felder, Gegner mit offenen Karten (fester Text). Sofort offen, ohne Stufensperre | gebaut; Freitext-Begründung über das Modell offen |
 | **5** | Das volle Brett nach Mebben hinter einer Wahl „Welches Brett?“, offen ab der fünften Übungsstufe, mit Markierungsschritt vor jedem eigenen Zug (Deckung auf dem Brett, `PUT /v1/coverage`, auf der Deckungsseite unter „Auf dem Brett“). Regelchat im Regelblatt: `POST /v1/rules/ask`, die Regelfassung als einziger Kontext, jede Zahl geprüft, „steht nicht in der Regelfassung“ als fester Satz, Antwort je Frage gecacht, drei Fragen pro Konto und Tag (Kontingent, Stufe 6) | gebaut; auf dem Web nicht mit laufendem Modell durchgespielt |
-| **6** | **Kontingente statt Bezahlschranke** (Entscheidung September 2026, Testphase): alles ist offen, die Funktionen mit Modellkosten sind pro Konto und Tag gezählt — eine Jagd, drei Regelfragen (`api/rithmos_api/quota.py`, `GET /v1/quota`). Heute, Kette, Üben, Deckung, Erzählerin und beide Bretter ohne Limit (das Übungslimit von fünf am Tag wurde nach einem Tag zurückgenommen: es sperrte Tester vom Brett aus). Das Abo (Anbieter, Konto-Bindung) kommt nach der Testphase und hebt die Limits; **Wolf-Ping vorher** | Kontingente gebaut; Abo verschoben |
+| **6** | **Kontingente statt Bezahlschranke** (Entscheidung September 2026, Testphase): alles ist offen, die Funktionen mit Modellkosten sind pro Konto und Tag gezählt — eine Jagd, drei Regelfragen, eine Erklärung (`api/rithmos_api/quota.py`, `GET /v1/quota`). Heute, Kette, Üben, Deckung, Erzählerin und beide Bretter ohne Limit (das Übungslimit von fünf am Tag wurde nach einem Tag zurückgenommen: es sperrte Tester vom Brett aus). Das Abo (Anbieter, Konto-Bindung) kommt nach der Testphase und hebt die Limits; **Wolf-Ping vorher** | Kontingente gebaut; Abo verschoben |
 
 Die vorhandene Brett-Oberfläche aus der ersten Fassung (`app/src/screens/GameScreen`,
 `Board`, `SetupScreen`) bleibt im Repo, verschwindet aber aus der Navigation, bis
 Stufe 4 sie in vereinfachter Form zurückholt.
 
-### Middles, Stufe 1, genau
+### Das Tagesrätsel, Stufe 1, genau
 
 - Ein Bildschirm. Drei große Felder, zwei Zahlen stehen, die dritte fehlt. Die
   Frage lautet „Welche Zahl gehört in die Mitte, nach dem Muster von 2 · 4 · 6?“:
@@ -87,7 +89,9 @@ Stufe 4 sie in vereinfachter Form zurückholt.
 - Richtig: die drei Zahlen schwingen zusammen, der Dreiklang erklingt, ein Satz
   erscheint. Ein Satz, nicht drei.
 - Serie („12 Tage in Folge") und ein teilbares Ergebnis in Textform:
-  `Middles Nº 47 · 2/3` plus drei Kästchen. Kein Emoji im Produkt.
+  `Rithmos Nº 47 · 2/3` plus drei Kästchen plus `rithmos.de`. Die Adresse steht in
+  jedem geteilten Ergebnis, auch bei der Kette; sie ist der Wachstumsweg. Kein Emoji
+  im Produkt.
 - Verteilung nach dem Lösen wie bisher, über die API.
 - Ohne Server läuft alles lokal, wie bisher. Die Rätsel kommen dann aus
   `jobs/src/middles.ts` im Bundle.
@@ -109,8 +113,11 @@ Stufe 4 sie in vereinfachter Form zurückholt.
   (`react-native-audio-api`) — Wolf-Ping, bis dahin nur der Ziffernblock.
 
 - **Fundstück des Tages.** Jeder zweite Tag ist ein echtes Vorkommen aus
-  `engine/rules/finds.ts` (Monochord, Villa Emo, Blendenreihe, F1-Score, …): die
-  Zahlen des Fundstücks, nach dem Lösen sein Satz, Ort und Quelle. Ein Test lässt
+  `engine/rules/finds.ts` (Monochord, Villa Emo, Blendenreihe, F1-Score, …): Titel
+  und Ort stehen schon vor dem Lösen über den Zahlen (der Tag beginnt mit dem
+  Ding), nach dem Lösen sein Satz und die Quelle. Jedes gelöste Fundstück wird
+  eine Karte in der **Sammlung** auf der Deckungsseite, gezählt gegen die Tabelle
+  (`app/src/middles/collection.ts`, nur auf dem Gerät). Ein Test lässt
   jedes Fundstück durch die Erkennung; was nicht verifiziert, kommt nicht ins
   Produkt. Die Übung nimmt an jedem vierten Rätsel der Stufen 1–3 ein Fundstück
   ihrer Mittelart.
@@ -120,6 +127,15 @@ Stufe 4 sie in vereinfachter Form zurückholt.
   folgende eine Harmonie bilden (2 · 4 · 6 · 9 · 12 · 16 · 24 · 48). Die längste
   Kette kennt die Suche (`jobs/src/chain.ts`); Ergebnis ist die erreichte Länge,
   teilbar als `Kette Nº 47 · 6/7`. Auf dem Gerät erzeugt, kein Server.
+
+- **„Erklär es mir“** (Abschnitt 6 auf dem Tagesrätsel, September 2026). Nach dem
+  Tag ein Satz in eigenen Worten, warum die Zahl die Mitte ist. Das Modell
+  übersetzt den Satz nur in eines von vier Mustern (Schritte, Faktoren,
+  Verhältnis, unklar; `Claim` in `llm.py`), der Server vergleicht mit der
+  Mittelart und dem Ergebnis des Tages und antwortet mit einem der vier Felder
+  als festem Text (`POST /v1/puzzles/{day}/explain`, eine Erklärung pro Konto und
+  Tag, Tabelle `explanations`). Das Modell urteilt nie. Die Formulierungen der
+  vier Felder sind vorläufig, Wolf-Ping.
 
 - **Harmonie-Jagd.** Ein Foto von etwas Zählbarem; der Spieler tippt zuerst, ob
   darin eine Harmonie steckt; dann zählt das Bildmodell nur (Namen und Anzahlen,
@@ -332,7 +348,7 @@ freiwillig, überspringbar und blockiert nie einen Zug. Gehört zu Stufe 4.
 Die Kennzahl ist nicht ELO, sondern: **Wie viel von dem, was die Engine sieht, sieht
 der Spieler ohne Hilfe?**
 
-**In Middles (Stufe 2):** Trefferquote je Mittelart, gleitendes Fenster über die
+**Im Tagesrätsel und in der Übung (Stufe 2):** Trefferquote je Mittelart, gleitendes Fenster über die
 letzten fünfzig Rätsel, als Trend über Wochen. Wer arithmetisch bei 90 % steht und
 musikalisch bei 40 %, sieht das — und die Progression zieht die Mittelart nach vorn,
 die hinterherhinkt.
@@ -402,7 +418,7 @@ normalisierte Frage und die Prompt-Version.
 | Zugvalidierung, Harmonieerkennung, Siegprüfung | Engine |
 | Rätselerzeugung und -verifikation | Generator und Solver, deterministisch |
 | Rätselprüfung auf dem Server | Vergleich mit der gespeicherten Lösung, keine Engine im Server |
-| Deckungsgrad | Engine, beziehungsweise Trefferquote in Middles |
+| Deckungsgrad | Engine, beziehungsweise Trefferquote im Tagesrätsel |
 | `verifyClaim`, Grund für abgelehnten Schlag, Absicht des Gegners | Engine |
 | Erzählerin, Coach, Regelchat, Übersetzung Spielertext → Behauptung | Sprachmodell |
 
@@ -430,7 +446,7 @@ Die verwendete Regelfassung wird im Spiel sichtbar genannt, mit Quellenangabe.
 - **Regressionskorpus** fester Stellungen
 - **Generator:** dreißig Tage Rätsel, jedes eindeutig, der mittlere Stein zieht
 - **API:** pytest gegen ein echtes PostgreSQL
-- **Middles-Oberfläche:** Store-Logik als reine Funktionen getestet; Web-Build per
+- **Rätsel-Oberfläche:** Store-Logik als reine Funktionen getestet; Web-Build per
   Chromium-Screenshot durchgespielt
 - **Modellausgaben** — gegen das Schema validiert, jede Zahl gegen das Rätsel
   geprüft, bevor sie angezeigt wird
@@ -483,13 +499,13 @@ committen — immer Branch, dann Pull Request. Tagesreport statt Zwischenmeldung
 
 ## 13. Was sich gegenüber der ersten Fassung geändert hat
 
-- Middles war Phase 3, das Vollspiel Phase 2. Jetzt ist Middles Stufe 1 und das
+- Das Tagesrätsel war Phase 3, das Vollspiel Phase 2. Jetzt ist es Stufe 1 und das
   Produkt; das Brett kommt klein in Stufe 4 und voll in Stufe 5.
 - Die Erzählerin ist neu und die erste KI-Funktion. Regelchat, Begründungsmodus und
   offene Karten rücken hinter das Brett, weil sie ein Brett voraussetzen.
 - Klang ist Teil des Produkts.
 - Ein Abschnitt Gestaltung ist neu; die Richtung ist ein Wolf-Ping.
-- Die Deckung bekommt eine Middles-Form (Trefferquote je Mittelart), die Brettform
+- Die Deckung bekommt eine Rätselform (Trefferquote je Mittelart), die Brettform
   bleibt.
 - Der Stack nennt `expo-audio` und die Deploy-Dateien, die inzwischen existieren.
 - Unverändert: Regelfassung, Engine, API, Generator, Zuständigkeitsgrenze der KI,
@@ -499,3 +515,6 @@ committen — immer Branch, dann Pull Request. Tagesreport statt Zwischenmeldung
   vier Angebote machten ein Multiple-Choice daraus, das Brett lag hinter Tagen
   Progression, und nirgends stand, wozu das alles. Daraus die Grundsätze
   „Die Rückmeldung lehrt die Regel“, „Eingabe verlangt Denken“ und der Einstieg.
+- Vierte Korrektur, September 2026: der Produktname. „Middles“ war ein generisches
+  englisches Wort, unauffindbar und ohne Bezug zur Adresse. Das Tagesrätsel heißt
+  jetzt Rithmos wie das Spiel, und jeder Teilen-Text endet mit rithmos.de.

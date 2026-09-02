@@ -12,7 +12,7 @@ from __future__ import annotations
 import os
 import re
 from dataclasses import dataclass
-from typing import Any, Protocol
+from typing import Any, Literal, Protocol
 
 from pydantic import BaseModel, Field, ValidationError
 
@@ -365,3 +365,73 @@ def check_answer(a: RuleAnswer, question: str) -> list[str]:
         if m not in allowed and not _is_year(m):
             problems.append(f"answer: number {m} is not in the rules")
     return problems
+
+
+# ---------------------------------------------------------------------------
+# "Erklär es mir" (CLAUDE.md 6, on the daily puzzle): the player says in their
+# own words why the number is the middle. The model only translates the words
+# into one of four patterns; the server compares with the puzzle's kind and
+# draws the verdict. The model never judges.
+
+EXPLAIN_VERSION = 1
+
+EXPLAIN_SYSTEM = """Ein Spieler erklärt in eigenen Worten, warum eine Zahl die Mitte einer Zahlenreihe ist. Ordne die
+Erklärung genau einem Muster zu, nur nach dem, was der Text sagt:
+- steps: gleiche Schritte, gleicher Abstand, plus dieselbe Zahl, Durchschnitt, arithmetisch.
+- factors: gleicher Faktor, mal dieselbe Zahl, verdoppelt, Wurzel, geometrisch.
+- ratio: die Schritte verhalten sich wie die Außenzahlen, Saiten, Verhältnis, Quarte und Quinte, harmonisch,
+  musikalisch, Kehrwerte.
+- unclear: nichts davon, geraten, keine Regel, nur die Zahl genannt.
+Erfinde nichts dazu und bewerte nicht, ob die Erklärung stimmt. evidence: die Worte des Spielers, die den
+Ausschlag geben, wörtlich aus dem Text, höchstens 120 Zeichen."""
+
+Pattern = Literal["steps", "factors", "ratio", "unclear"]
+PATTERN_KIND: dict[str, str] = {"steps": "arithmetic", "factors": "geometric", "ratio": "musical"}
+
+
+class Claim(BaseModel):
+    pattern: Pattern
+    evidence: str = Field(max_length=160)
+
+
+class ExplainProvider(Protocol):
+    def translate(self, system: str, text: str) -> Claim: ...
+
+
+@dataclass
+class AnthropicExplain:
+    model: str = MODEL
+
+    def translate(self, system: str, text: str) -> Claim:
+        import anthropic
+
+        client = anthropic.Anthropic()
+        response = client.messages.parse(
+            model=self.model,
+            max_tokens=300,
+            system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
+            messages=[{"role": "user", "content": text}],
+            output_format=Claim,
+        )
+        if response.stop_reason == "refusal" or response.parsed_output is None:
+            raise RuntimeError(f"no claim: stop_reason={response.stop_reason}")
+        return response.parsed_output
+
+
+def explain_from_env() -> ExplainProvider | None:
+    return AnthropicExplain() if os.environ.get("ANTHROPIC_API_KEY") else None
+
+
+def explain_input(text: str, a: int, answer: float, c: int) -> str:
+    """What the model sees: the row as the player left it, then their words."""
+    return f"Reihe: {a} · {answer:g} · {c}\nErklärung: {text.strip()}"
+
+
+def judge_explanation(pattern: str, kind: str, solved: bool) -> str:
+    """The four fields of CLAUDE.md 6: reason holds or not, answer right or not."""
+    if pattern == "unclear":
+        return "none"
+    holds = PATTERN_KIND.get(pattern) == kind
+    if solved:
+        return "understood" if holds else "luck"
+    return "slip" if holds else "misread"

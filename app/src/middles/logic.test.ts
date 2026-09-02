@@ -47,9 +47,9 @@ describe('a day and its streak', () => {
 
 describe('share text', () => {
   it('is number, score and three boxes, no emoji', () => {
-    expect(shareText('2026-10-17', { solved: true, answers: [9, 8] })).toBe('Middles Nº 47 · 2/3\n■■□');
-    expect(shareText('2026-09-01', { solved: true, answers: [8] })).toBe('Middles Nº 1 · 1/3\n■□□');
-    expect(shareText('2026-09-01', { solved: false, answers: [1, 2, 3] })).toBe('Middles Nº 1 · X/3\n■■■');
+    expect(shareText('2026-10-17', { solved: true, answers: [9, 8] })).toBe('Rithmos Nº 47 · 2/3\n■■□\nrithmos.de');
+    expect(shareText('2026-09-01', { solved: true, answers: [8] })).toBe('Rithmos Nº 1 · 1/3\n■□□\nrithmos.de');
+    expect(shareText('2026-09-01', { solved: false, answers: [1, 2, 3] })).toBe('Rithmos Nº 1 · X/3\n■■■\nrithmos.de');
   });
 });
 

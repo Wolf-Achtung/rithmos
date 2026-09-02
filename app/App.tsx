@@ -217,8 +217,9 @@ export default function App() {
       </View>
 
       <Modal visible={sheet !== 'none'} transparent animationType="fade" onRequestClose={() => setSheet('none')}>
-        <Pressable style={styles.scrim} onPress={() => setSheet('none')} testID="settings-scrim" />
-        <View style={styles.sheet} testID="settings-sheet">
+        <View style={[styles.modalRoot, sheet === 'intro' && styles.modalCenter]}>
+          <Pressable style={styles.scrim} onPress={() => setSheet('none')} testID="settings-scrim" />
+          <View style={[styles.sheet, sheet === 'intro' && styles.card]} testID="settings-sheet">
           {sheet === 'settings' ? (
             <>
               <Text style={styles.sheetTitle}>{texts.settings}</Text>
@@ -316,6 +317,7 @@ export default function App() {
               </View>
             </>
           )}
+          </View>
         </View>
       </Modal>
       <StatusBar style={themeName === 'dark' ? 'light' : 'dark'} />
@@ -358,8 +360,11 @@ function makeStyles(p: Palette) {
     tab: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
     tabLabel: { fontFamily: fonts.textMedium, fontSize: type.small.fontSize, color: p.muted, letterSpacing: 0.4 },
     tabActive: { color: p.accent },
+    modalRoot: { flex: 1, justifyContent: 'flex-end', alignItems: 'center' },
+    modalCenter: { justifyContent: 'center', padding: spacing.lg },
     scrim: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.55)' },
-    sheet: { position: 'absolute', left: 0, right: 0, bottom: 0, maxHeight: '85%', width: '100%', maxWidth: 520, alignSelf: 'center', backgroundColor: p.surface, borderTopLeftRadius: radius.card, borderTopRightRadius: radius.card, borderWidth: 1, borderColor: p.border, padding: spacing.lg, gap: spacing.md },
+    sheet: { width: '100%', maxWidth: 520, maxHeight: '85%', backgroundColor: p.surface, borderTopLeftRadius: radius.card, borderTopRightRadius: radius.card, borderWidth: 1, borderColor: p.border, padding: spacing.lg, gap: spacing.md },
+    card: { maxWidth: 440, borderRadius: radius.card },
     sheetTitle: { fontFamily: fonts.numeralBold, fontSize: type.title.fontSize, color: p.ink },
     row: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
     rowLabel: { fontFamily: fonts.text, fontSize: type.body.fontSize, color: p.ink },

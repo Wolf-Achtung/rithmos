@@ -119,7 +119,7 @@ export function verifyChain(p: ChainPuzzle): { valid: boolean; reason: string } 
   return { valid: true, reason: 'ok' };
 }
 
-/** `Kette Nº 47 · 6/7` */
+/** `Kette Nº 47 · 6/7` and the address, as the daily result carries it. */
 export function chainShareText(date: string, reached: number, best: number): string {
-  return `Kette Nº ${middlesNumber(date)} · ${reached}/${best}`;
+  return `Kette Nº ${middlesNumber(date)} · ${reached}/${best}\nrithmos.de`;
 }

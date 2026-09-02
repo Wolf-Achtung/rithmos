@@ -11,6 +11,7 @@ import { BASE_FREQUENCY } from '../middles/chord';
 import { startDrone } from '../middles/tone';
 import type { Drone } from '../middles/tone';
 import { valueAt } from '../middles/tuning';
+import { texts } from '../texts';
 import { fonts, spacing, type } from '../theme';
 import type { Palette } from '../theme';
 
@@ -101,6 +102,7 @@ export function Tuner({ a, c, palette, soundOn, disabled, onChange, onRelease, t
       </View>
       <View style={styles.ends}>
         <Text style={styles.end}>{a}</Text>
+        <Text style={styles.hint}>{texts.tunerHint}</Text>
         <Text style={styles.end}>{c}</Text>
       </View>
     </View>
@@ -120,5 +122,6 @@ function makeStyles(p: Palette) {
     knobActive: { transform: [{ scale: 1.25 }] },
     ends: { flexDirection: 'row', justifyContent: 'space-between', paddingHorizontal: 2 },
     end: { fontFamily: fonts.text, fontSize: type.small.fontSize, color: p.muted },
+    hint: { fontFamily: fonts.text, fontSize: type.small.fontSize, color: p.missing, letterSpacing: 0.3 },
   });
 }

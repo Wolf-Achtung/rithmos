@@ -15,6 +15,7 @@ import { apiConfigured, fetchDistribution, fetchNarration, fetchTodayPuzzle, sub
 import type { Distribution, Narration, Session } from '../api/client';
 import { Gaps, Keypad, Numeral, Offer, PillButton, Wave, intervalLabel, makeTriadStyles } from '../components/Triad';
 import { Tuner } from '../components/Tuner';
+import { ExplainAsk } from './ExplainAsk';
 import type { TunerState } from '../components/Tuner';
 import { chordFrequencies } from '../middles/chord';
 import { HELP_AFTER, MAX_TRIES, feedbackFor, gapLine, isFinished, patternExample, recordAnswer, shareText, streakOn, triesOf } from '../middles/logic';
@@ -25,6 +26,7 @@ import { canTune } from '../middles/tone';
 import { judgeRelease } from '../middles/tuning';
 import { store } from '../storage';
 import { texts, triadSentence } from '../texts';
+import { spacing } from '../theme';
 import type { Palette } from '../theme';
 
 const RESULTS_KEY = 'middles:results';
@@ -140,7 +142,7 @@ export function MiddlesScreen({ session, palette, soundOn, onOpenSettings, onSki
   function tap(answer: number) {
     if (!loaded || finished) return;
     const solved = feedbackFor(loaded.triad, answer).kind === 'right';
-    const next = recordAnswer(results, loaded.date, answer, solved);
+    const next = recordAnswer(results, loaded.date, answer, solved, undefined, loaded.triad.find?.id);
     setResults(next);
     setTyped('');
     void store.write(RESULTS_KEY, next);
@@ -157,7 +159,7 @@ export function MiddlesScreen({ session, palette, soundOn, onOpenSettings, onSki
     const { triad, b } = loaded;
     const verdict = judgeRelease(value, b, triad.kind, triad.a, triad.c);
     const answer = verdict.kind === 'right' ? b : verdict.kind === 'otherMean' ? verdict.value : Math.round(value * 10) / 10;
-    const next = recordAnswer(results, loaded.date, answer, verdict.kind === 'right', verdict.cents);
+    const next = recordAnswer(results, loaded.date, answer, verdict.kind === 'right', verdict.cents, triad.find?.id);
     setResults(next);
     void store.write(RESULTS_KEY, next);
   }
@@ -221,6 +223,12 @@ export function MiddlesScreen({ session, palette, soundOn, onOpenSettings, onSki
         </View>
       </View>
 
+      {triad.find && !finished ? (
+        <Text style={[styles.small, { marginTop: spacing.lg }]} testID="middles-find-lead">
+          {texts.findLine(triad.find.title, triad.find.where)}
+        </Text>
+      ) : null}
+
       <View style={styles.numbers} testID="middles-numbers">
         <Numeral value={triad.a} styles={styles} swing={swing} rate={1} />
         {finished ? (
@@ -270,6 +278,7 @@ export function MiddlesScreen({ session, palette, soundOn, onOpenSettings, onSki
             </Text>
           ) : null}
           {loaded.source === 'local' ? <Text style={styles.small}>{texts.triadOffline}</Text> : null}
+          {loaded.source === 'api' && session ? <ExplainAsk session={session} date={loaded.date} palette={palette} /> : null}
           {narration ? (
             <View style={styles.voices} testID="middles-narration">
               <Text style={styles.voice}>

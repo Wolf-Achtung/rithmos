@@ -13,11 +13,11 @@ npm run app:web        # Expo dev server for the web
 npm run app:export     # static web build to app/dist (set EXPO_PUBLIC_API_URL first)
 cd app && npx expo start   # iOS / Android via Expo Go or a development build
 
-npm run jobs:build && node jobs/dist/generate.js --days 7   # Middles puzzles, see jobs/README.md
+npm run jobs:build && node jobs/dist/generate.js --days 7   # daily puzzles, see jobs/README.md
 cd api && .venv/bin/python -m pytest                        # API tests, see api/README.md
 ```
 
-Layout: `engine/` pure TypeScript, `app/` Expo (SDK 57), `api/` FastAPI, `jobs/` nightly Middles generator,
+Layout: `engine/` pure TypeScript, `app/` Expo (SDK 57), `api/` FastAPI, `jobs/` nightly puzzle generator,
 `infra/` docker-compose and environment variable names (`infra/.env.example`).
 
 The `Dockerfile` in this directory builds the API service from `api/`. It sits at the root because
@@ -29,6 +29,6 @@ build settings configured in the Netlify UI.
 
 `EXPO_PUBLIC_API_URL` is compiled into the bundle at build time, so it belongs in the deploy
 environment, not in a running build. Without it the app runs offline: local opponent, local coverage
-trend, a locally generated Middles puzzle. With the API it adds an anonymous account, coverage across
+trend, a locally generated daily puzzle. With the API it adds an anonymous account, coverage across
 devices and the daily distribution. The web export always clears the Metro cache, so a changed address
 never leaves a stale one in the bundle.

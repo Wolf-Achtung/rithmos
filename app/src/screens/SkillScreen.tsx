@@ -3,8 +3,8 @@
  * over the last fifty puzzles, and the trend over weeks. Numbers, not a
  * score; the lagging mean is named because the practice pulls it forward.
  */
-import { useMemo } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { HARMONY_KINDS } from '../../../engine/harmony';
 import { unlockedLevel } from '../../../jobs/src/practice';
 import { formatWeek } from '../coverage';
@@ -12,6 +12,9 @@ import { hitRates, solvedAtLevel, weakestKind, weeklyHitTrend } from '../middles
 import { weeklyTrend, windowAverage } from '../coverage';
 import type { CoverageRecord } from '../coverage';
 import type { SkillRecord } from '../middles/skill';
+import { collection, foundIds } from '../middles/collection';
+import type { DayResult } from '../middles/logic';
+import { store } from '../storage';
 import { kindName, patternName, texts } from '../texts';
 import { fonts, radius, spacing, type } from '../theme';
 import type { Palette } from '../theme';
@@ -29,6 +32,16 @@ export function SkillScreen({ palette, records, coverage = [] }: Props) {
   const weeks = weeklyHitTrend(records).slice(-8);
   const lagging = weakestKind(records);
   const level = unlockedLevel((l) => solvedAtLevel(records, l));
+  // the daily results live in their own store; read once when the screen opens
+  const [days, setDays] = useState<DayResult[]>([]);
+  useEffect(() => {
+    let alive = true;
+    void store.read<DayResult[]>('middles:results', []).then((d) => alive && setDays(d));
+    return () => {
+      alive = false;
+    };
+  }, []);
+  const finds = collection(foundIds(days, records));
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.container} testID="skill">
@@ -53,6 +66,19 @@ export function SkillScreen({ palette, records, coverage = [] }: Props) {
 
       <Text style={styles.small}>{lagging && records.length > 0 ? texts.skillLagging(lagging) : texts.skillLevel(level)}</Text>
       {lagging && records.length > 0 ? <Text style={styles.small}>{texts.skillLevel(level)}</Text> : null}
+
+      <Text style={styles.section}>{texts.collectionTitle}</Text>
+      <Text style={styles.small} testID="collection-count">
+        {finds.found.length === 0 ? texts.collectionNone : texts.collectionCount(finds.found.length, finds.total)}
+      </Text>
+      {finds.found.map((f) => (
+        <Pressable key={f.id} onPress={() => void Linking.openURL(f.source).catch(() => undefined)} style={styles.card} testID={`find-${f.id}`}>
+          <Text style={styles.cardTitle}>{f.title}</Text>
+          <Text style={styles.small}>
+            {f.where} · {f.values.join(' · ')}
+          </Text>
+        </Pressable>
+      ))}
 
       <Text style={styles.section}>{texts.skillBoardTitle}</Text>
       {(() => {
@@ -122,6 +148,8 @@ function makeStyles(p: Palette) {
     small: { fontFamily: fonts.text, fontSize: type.small.fontSize, lineHeight: type.small.lineHeight, color: p.muted },
     section: { fontFamily: fonts.textMedium, fontSize: type.small.fontSize, color: p.muted, letterSpacing: 1, textTransform: 'uppercase', marginTop: spacing.lg },
     weeks: { gap: spacing.xs },
+    card: { borderRadius: radius.card, borderWidth: 1, borderColor: p.border, backgroundColor: p.surface, paddingHorizontal: spacing.md, paddingVertical: spacing.sm, gap: 2 },
+    cardTitle: { fontFamily: fonts.numeral, fontSize: 18, color: p.ink },
     weekRow: { flexDirection: 'row', alignItems: 'center' },
     weekLabel: { flex: 1.4, fontFamily: fonts.text, fontSize: type.small.fontSize, color: p.muted },
     weekCell: { flex: 1, fontFamily: fonts.numeral, fontSize: 15, color: p.ink, textAlign: 'right' },

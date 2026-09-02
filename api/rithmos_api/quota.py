@@ -20,7 +20,8 @@ class Feature:
 
 HUNT = Feature("hunt", "hunts", 1)
 RULES = Feature("rules", "rule_questions", 3)
-FEATURES = (HUNT, RULES)
+EXPLAIN = Feature("explain", "explanations", 1)
+FEATURES = (HUNT, RULES, EXPLAIN)
 
 
 def used_today(conn: Any, account_id: Any, feature: Feature) -> int:

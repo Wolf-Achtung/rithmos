@@ -11,7 +11,7 @@
 #   EXPO_PUBLIC_API_URL = https://<the API service on Railway>
 #
 # Without it the app runs fully offline: local opponent, local coverage trend,
-# a locally generated Middles puzzle.
+# a locally generated daily puzzle.
 
 [build]
   # Paths below are resolved relative to this base, so it has to be the

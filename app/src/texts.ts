@@ -3,7 +3,7 @@
  */
 import type { CaptureMethod } from '../../engine/capture';
 import type { HarmonyKind } from '../../engine/harmony';
-import type { Side, VictoryClass } from '../../engine/types';
+import type { Side, SimpleShape, VictoryClass } from '../../engine/types';
 
 export const sideName: Record<Side, string> = { white: 'Weiß', black: 'Schwarz' };
 export const methodName: Record<CaptureMethod, string> = {
@@ -28,6 +28,7 @@ export const patternShort: Record<HarmonyKind, string> = {
   geometric: 'Faktoren',
   musical: 'wie außen',
 };
+export const shapeName: Record<SimpleShape, string> = { round: 'Der Kreis', triangle: 'Das Dreieck', square: 'Das Quadrat' };
 export const victoryName: Record<VictoryClass, string> = {
   minor: 'Kleiner Sieg',
   major: 'Großer Sieg',
@@ -72,7 +73,7 @@ export const texts = {
   ruleSet: 'Regelfassung',
   loading: 'Lädt …',
   apiError: (detail: string) => `Der Server antwortet nicht (${detail}). Das Spiel läuft weiter, die Ablage wird später nachgeholt.`,
-  middles: 'Middles',
+  middles: 'Rithmos',
   middlesIntro: (side: Side) =>
     `${sideName[side]} am Zug. Zwei Steine einer Harmonie stehen schon. Finde das Feld, auf dem der mittlere Stein sie mit einem Zug vollendet.`,
   middlesTap: 'Tippe den Stein, dann das Zielfeld.',
@@ -95,6 +96,10 @@ export const texts = {
   triadStreak: (days: number) => (days === 1 ? '1 Tag in Folge' : `${days} Tage in Folge`),
   triadQuestion: (example: readonly number[]) => `Welche Zahl gehört in die Mitte, nach dem Muster von ${example.join(' · ')}?`,
   keypadEnter: 'Antwort',
+  tunerHint: 'ziehen und hören',
+  senseName: { number: 'Zahl', length: 'Länge', tone: 'Ton' } as const,
+  lengthExample: 'Muster',
+  lengthQuestion: 'Zieh den mittleren Balken, bis die drei Längen dasselbe Muster bilden wie das kleine.',
   triadTry: (n: number, max: number) => `Versuch ${n} von ${max}`,
   triadOtherMean: (answer: number, mean: HarmonyKind) => `${answer} folgt dem Muster „${patternName[mean]}“, hier ist ein anderes gefragt.`,
   triadWrong: (answer: number) => `${answer} baut aus den dreien kein Muster.`,
@@ -111,6 +116,19 @@ export const texts = {
   whoLiesWrong: (i: number) => `Nein, das war eine Lüge. Die ${i + 1}. stimmt.`,
   findLine: (title: string, where: string) => `${title} · ${where}`,
   triadShare: 'Teilen',
+  // "Erklär es mir": the four fields of CLAUDE.md 6 on the daily puzzle (wording provisional, Wolf-Ping)
+  explainTitle: 'Warum?',
+  explainPlaceholder: 'Warum gehört diese Zahl in die Mitte?',
+  explainSend: 'Prüfen',
+  explainSpent: 'Heute schon erklärt.',
+  explainOff: 'Heute nicht verfügbar.',
+  explainVerdict: {
+    understood: 'Verstanden: richtig, und aus dem richtigen Grund.',
+    luck: 'Glück: richtig, aber aus einem anderen Grund, als das Muster verlangt.',
+    slip: 'Rechenfehler: der Grund stimmt, die Zahl nicht.',
+    misread: 'Missverständnis: der Grund passt zu einem anderen Muster, und die Zahl stimmt nicht.',
+    none: 'Daraus lese ich kein Muster. Sag, was zwischen den drei Zahlen gleich bleibt.',
+  } as const,
   triadCopied: 'Kopiert.',
   triadScore: (n: number, tries: number | null, max: number) => `Nº ${n} · ${tries === null ? 'X' : tries}/${max}`,
   triadDistribution: (attempts: number, solved: number) => (attempts === 0 ? 'Du bist heute die erste Person.' : `${solved} von ${attempts} haben es heute gelöst.`),
@@ -131,7 +149,7 @@ export const texts = {
   tabChain: 'Kette',
   tabSkill: 'Deckung',
   chain: 'Die Kette',
-  chainQuestion: 'Wie lang wird die Kette?',
+  chainQuestion: 'Lege die Zahlen so, dass je drei nacheinander ein Muster bilden, wie 2 · 4 · 6 · 9 · 12.',
   chainLinks: (n: number, best: number) => (n === 1 ? `Ein Glied · bis zu ${best} möglich` : `${n} Glieder · bis zu ${best} möglich`),
   chainStuck: (n: number, best: number) => `Hier geht es nicht weiter: ${n} von ${best}.`,
   chainDone: (best: number) => `Die längste Kette des Tages: ${best} Glieder.`,
@@ -186,6 +204,10 @@ export const texts = {
   boardFullLocked: 'Das volle Brett öffnet sich, wenn alle fünf Übungsstufen offen sind.',
   boardTurn: (n: number) => `Zug ${n}`,
   boardYourMove: 'Du bist am Zug.',
+  boardPyramidMove: 'Die Pyramide zieht wie ihre Bestandteile.',
+  boardGoal: 'Ziel: drei eigene Steine in der oberen Hälfte, gleich weit auseinander, mit einem Muster wie 2 · 4 · 6.',
+  boardPieceMove: (shape: SimpleShape, steps: number, directions: 'orthogonal' | 'diagonal' | 'all') =>
+    `${shapeName[shape]} zieht ${steps === 1 ? 'ein Feld' : `${steps} Felder`} ${directions === 'orthogonal' ? 'gerade' : directions === 'diagonal' ? 'diagonal' : 'in jede Richtung'}.`,
   boardWhy: 'Warum dieser Zug?',
   boardNoReason: 'Einfach so',
   boardReason: {
@@ -226,6 +248,9 @@ export const texts = {
   boardMarkContinue: 'Weiter',
   boardBack: 'Zurück',
   skillBoardTitle: 'Auf dem Brett',
+  collectionTitle: 'Sammlung',
+  collectionCount: (found: number, total: number) => `${found} von ${total} Fundstücken`,
+  collectionNone: 'Noch kein Fundstück gelöst. Jeder zweite Tag bringt eines, die Übung jedes vierte Rätsel.',
   skillBoardLabel: 'Markiert, was die Engine sieht',
   skillBoardAverage: (pct: number, n: number) => `${pct} % über die letzten ${n} Züge`,
   skillBoardNone: 'Noch kein Zug mit Markierung.',
@@ -240,10 +265,10 @@ export const texts = {
   rulesAskRemaining: (n: number) => (n === 1 ? 'Eine Frage heute noch.' : `${n} Fragen heute noch.`),
   settings: 'Einstellungen',
   whatIsThis: 'Was ist das?',
-  introTitle: 'Middles',
+  introTitle: 'Rithmos',
   intro: [
     'Drei Zahlen, eine fehlt. Die Mitte macht aus der Reihe eine Proportion: dieselben drei Proportionen, die Pythagoras auf der Saite fand und die heute in Durchschnitten, Wachstumsraten und der Bewertung von Modellen stecken.',
-    'Rithmos ist ein Zahlenkampfspiel aus dem Mittelalter, Rithmomachia. Middles ist sein Kern: jeden Tag eine Mitte, drei Versuche, ein Dreiklang zum Hören.',
+    'Rithmos ist ein Zahlenkampfspiel aus dem Mittelalter, Rithmomachia. Sein Kern passt in einen Tag: eine Mitte, drei Versuche, ein Dreiklang zum Hören.',
     'Nach jedem Tipp siehst du, was du gebaut hast. Nach ein paar Tagen siehst du Proportionen, ohne zu rechnen. Das ist die Fähigkeit, die dieses Spiel trainiert und misst.',
   ] as const,
   introStart: 'Los',
