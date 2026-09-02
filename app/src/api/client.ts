@@ -92,6 +92,7 @@ export interface PuzzleTriad {
   readonly a: number;
   readonly c: number;
   readonly options: readonly number[];
+  readonly find?: { readonly id: string; readonly title: string; readonly where: string; readonly sentence: string; readonly source: string } | null;
 }
 
 export interface Puzzle {

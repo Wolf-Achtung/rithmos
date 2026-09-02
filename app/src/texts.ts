@@ -90,6 +90,8 @@ export const texts = {
   triadRevealed: (b: number) => `Die Mitte war ${b}. Morgen gibt es eine neue.`,
   triadPlayedToday: 'Heute schon gespielt. Morgen gibt es eine neue Mitte.',
   triadListen: 'Dreiklang anhören',
+  findSource: 'Quelle',
+  findLine: (title: string, where: string) => `${title} · ${where}`,
   triadShare: 'Teilen',
   triadCopied: 'Kopiert.',
   triadScore: (n: number, tries: number | null, max: number) => `Nº ${n} · ${tries === null ? 'X' : tries}/${max}`,

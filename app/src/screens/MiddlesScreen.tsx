@@ -4,7 +4,7 @@
  * the three numbers swing together, the chord sounds, one sentence appears.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, Share, Text, View, useWindowDimensions } from 'react-native';
+import { Linking, Pressable, ScrollView, Share, Text, View, useWindowDimensions } from 'react-native';
 import { Easing, cancelAnimation, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 import { meanOf } from '../../../engine/harmony';
 import { generateMiddles, isoDate, middlesNumber } from '../../../jobs/src/middles';
@@ -51,7 +51,9 @@ async function loadToday(session: Session | null): Promise<Loaded> {
       const puzzle = await fetchTodayPuzzle(session);
       if (puzzle?.triad) {
         const b = meanOf(puzzle.triad.kind, puzzle.triad.a, puzzle.triad.c);
-        if (b !== null && puzzle.triad.options.includes(b)) return { date: puzzle.date, triad: puzzle.triad, b, source: 'api' };
+        const { find, ...rest } = puzzle.triad;
+        const triad: Triad = find ? { ...rest, find } : rest;
+        if (b !== null && triad.options.includes(b)) return { date: puzzle.date, triad, b, source: 'api' };
       }
     } catch {
       // offline: the generator in the bundle takes over
@@ -170,7 +172,7 @@ export function MiddlesScreen({ session, palette, soundOn, onOpenSettings, onSki
   const tries = today ? triesOf(today) : 0;
   const sentence = finished
     ? solved
-      ? triadSentence(triad.kind, triad.a, b, triad.c, number)
+      ? (triad.find?.sentence ?? triadSentence(triad.kind, triad.a, b, triad.c, number))
       : texts.triadRevealed(b)
     : feedback?.kind === 'otherMean'
       ? texts.triadOtherMean(lastAnswer!, feedback.mean)
@@ -243,6 +245,13 @@ export function MiddlesScreen({ session, palette, soundOn, onOpenSettings, onSki
         </View>
       ) : (
         <View style={styles.after}>
+          {triad.find ? (
+            <Pressable onPress={() => void Linking.openURL(triad.find!.source).catch(() => undefined)} testID="middles-find" hitSlop={8}>
+              <Text style={styles.small}>
+                {texts.findLine(triad.find.title, triad.find.where)} · <Text style={{ color: palette.accent }}>{texts.findSource}</Text>
+              </Text>
+            </Pressable>
+          ) : null}
           <PillButton label={texts.triadListen} onPress={listen} styles={styles} testID="middles-listen" />
           {distribution ? (
             <Text style={styles.small} testID="middles-distribution">
