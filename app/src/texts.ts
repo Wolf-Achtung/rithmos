@@ -72,7 +72,7 @@ export const texts = {
   ruleSet: 'Regelfassung',
   loading: 'Lädt …',
   apiError: (detail: string) => `Der Server antwortet nicht (${detail}). Das Spiel läuft weiter, die Ablage wird später nachgeholt.`,
-  middles: 'Middles',
+  middles: 'Rithmos',
   middlesIntro: (side: Side) =>
     `${sideName[side]} am Zug. Zwei Steine einer Harmonie stehen schon. Finde das Feld, auf dem der mittlere Stein sie mit einem Zug vollendet.`,
   middlesTap: 'Tippe den Stein, dann das Zielfeld.',
@@ -240,10 +240,10 @@ export const texts = {
   rulesAskRemaining: (n: number) => (n === 1 ? 'Eine Frage heute noch.' : `${n} Fragen heute noch.`),
   settings: 'Einstellungen',
   whatIsThis: 'Was ist das?',
-  introTitle: 'Middles',
+  introTitle: 'Rithmos',
   intro: [
     'Drei Zahlen, eine fehlt. Die Mitte macht aus der Reihe eine Proportion: dieselben drei Proportionen, die Pythagoras auf der Saite fand und die heute in Durchschnitten, Wachstumsraten und der Bewertung von Modellen stecken.',
-    'Rithmos ist ein Zahlenkampfspiel aus dem Mittelalter, Rithmomachia. Middles ist sein Kern: jeden Tag eine Mitte, drei Versuche, ein Dreiklang zum Hören.',
+    'Rithmos ist ein Zahlenkampfspiel aus dem Mittelalter, Rithmomachia. Sein Kern passt in einen Tag: eine Mitte, drei Versuche, ein Dreiklang zum Hören.',
     'Nach jedem Tipp siehst du, was du gebaut hast. Nach ein paar Tagen siehst du Proportionen, ohne zu rechnen. Das ist die Fähigkeit, die dieses Spiel trainiert und misst.',
   ] as const,
   introStart: 'Los',

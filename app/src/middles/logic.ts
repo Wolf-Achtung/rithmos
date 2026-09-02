@@ -1,5 +1,5 @@
 /**
- * Middles without the board: what a tap means, what a day is worth, what the
+ * The daily puzzle without the board: what a tap means, what a day is worth, what the
  * share text says. Pure functions, no React, no I/O.
  */
 import { HARMONY_KINDS, harmonyKinds, meanOf } from '../../../engine/harmony';
@@ -55,12 +55,15 @@ export function previousDay(date: string): string {
   return new Date(Date.parse(`${date}T00:00:00Z`) - 86_400_000).toISOString().slice(0, 10);
 }
 
-/** `Middles Nº 47 · 2/3` and the three boxes: one per try used. No emoji. */
+/** The address every shared result carries: the one way the game spreads. */
+export const SITE = 'rithmos.de';
+
+/** `Rithmos Nº 47 · 2/3`, the three boxes (one per try used) and the address. No emoji. */
 export function shareText(date: string, result: Pick<DayResult, 'solved' | 'answers'>): string {
   const tries = triesOf(result);
   const score = result.solved ? `${tries}/${MAX_TRIES}` : `X/${MAX_TRIES}`;
   const boxes = Array.from({ length: MAX_TRIES }, (_, i) => (i < tries ? '■' : '□')).join('');
-  return `Middles Nº ${middlesNumber(date)} · ${score}\n${boxes}`;
+  return `Rithmos Nº ${middlesNumber(date)} · ${score}\n${boxes}\n${SITE}`;
 }
 
 /** Update the day's stored results with one more answer. */

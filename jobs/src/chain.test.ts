@@ -40,6 +40,6 @@ describe('the chain', () => {
   });
 
   it('shares as text', () => {
-    expect(chainShareText('2026-10-17', 6, 7)).toBe('Kette Nº 47 · 6/7');
+    expect(chainShareText('2026-10-17', 6, 7)).toBe('Kette Nº 47 · 6/7\nrithmos.de');
   });
 });
