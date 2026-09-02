@@ -3,7 +3,7 @@
  */
 import type { CaptureMethod } from '../../engine/capture';
 import type { HarmonyKind } from '../../engine/harmony';
-import type { Side, VictoryClass } from '../../engine/types';
+import type { Side, SimpleShape, VictoryClass } from '../../engine/types';
 
 export const sideName: Record<Side, string> = { white: 'Weiß', black: 'Schwarz' };
 export const methodName: Record<CaptureMethod, string> = {
@@ -28,6 +28,7 @@ export const patternShort: Record<HarmonyKind, string> = {
   geometric: 'Faktoren',
   musical: 'wie außen',
 };
+export const shapeName: Record<SimpleShape, string> = { round: 'Der Kreis', triangle: 'Das Dreieck', square: 'Das Quadrat' };
 export const victoryName: Record<VictoryClass, string> = {
   minor: 'Kleiner Sieg',
   major: 'Großer Sieg',
@@ -95,6 +96,7 @@ export const texts = {
   triadStreak: (days: number) => (days === 1 ? '1 Tag in Folge' : `${days} Tage in Folge`),
   triadQuestion: (example: readonly number[]) => `Welche Zahl gehört in die Mitte, nach dem Muster von ${example.join(' · ')}?`,
   keypadEnter: 'Antwort',
+  tunerHint: 'ziehen und hören',
   triadTry: (n: number, max: number) => `Versuch ${n} von ${max}`,
   triadOtherMean: (answer: number, mean: HarmonyKind) => `${answer} folgt dem Muster „${patternName[mean]}“, hier ist ein anderes gefragt.`,
   triadWrong: (answer: number) => `${answer} baut aus den dreien kein Muster.`,
@@ -131,7 +133,7 @@ export const texts = {
   tabChain: 'Kette',
   tabSkill: 'Deckung',
   chain: 'Die Kette',
-  chainQuestion: 'Wie lang wird die Kette?',
+  chainQuestion: 'Lege die Zahlen so, dass je drei nacheinander ein Muster bilden, wie 2 · 4 · 6 · 9 · 12.',
   chainLinks: (n: number, best: number) => (n === 1 ? `Ein Glied · bis zu ${best} möglich` : `${n} Glieder · bis zu ${best} möglich`),
   chainStuck: (n: number, best: number) => `Hier geht es nicht weiter: ${n} von ${best}.`,
   chainDone: (best: number) => `Die längste Kette des Tages: ${best} Glieder.`,
@@ -186,6 +188,10 @@ export const texts = {
   boardFullLocked: 'Das volle Brett öffnet sich, wenn alle fünf Übungsstufen offen sind.',
   boardTurn: (n: number) => `Zug ${n}`,
   boardYourMove: 'Du bist am Zug.',
+  boardPyramidMove: 'Die Pyramide zieht wie ihre Bestandteile.',
+  boardGoal: 'Ziel: drei eigene Steine in der oberen Hälfte, gleich weit auseinander, mit einem Muster wie 2 · 4 · 6.',
+  boardPieceMove: (shape: SimpleShape, steps: number, directions: 'orthogonal' | 'diagonal' | 'all') =>
+    `${shapeName[shape]} zieht ${steps === 1 ? 'ein Feld' : `${steps} Felder`} ${directions === 'orthogonal' ? 'gerade' : directions === 'diagonal' ? 'diagonal' : 'in jede Richtung'}.`,
   boardWhy: 'Warum dieser Zug?',
   boardNoReason: 'Einfach so',
   boardReason: {
