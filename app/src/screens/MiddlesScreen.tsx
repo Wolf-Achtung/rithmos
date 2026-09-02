@@ -9,8 +9,8 @@ import { Easing, cancelAnimation, useSharedValue, withSequence, withTiming } fro
 import { meanOf } from '../../../engine/harmony';
 import { generateMiddles, isoDate, middlesNumber } from '../../../jobs/src/middles';
 import type { Triad } from '../../../jobs/src/middles';
-import { apiConfigured, fetchDistribution, fetchTodayPuzzle, submitAttempt } from '../api/client';
-import type { Distribution, Session } from '../api/client';
+import { apiConfigured, fetchDistribution, fetchNarration, fetchTodayPuzzle, submitAttempt } from '../api/client';
+import type { Distribution, Narration, Session } from '../api/client';
 import { Numeral, Offer, PillButton, Wave, intervalLabel, makeTriadStyles } from '../components/Triad';
 import { Tuner } from '../components/Tuner';
 import type { TunerState } from '../components/Tuner';
@@ -88,6 +88,8 @@ export function MiddlesScreen({ session, palette, soundOn, onOpenSettings, onSki
   const [results, setResults] = useState<DayResult[]>([]);
   const [ready, setReady] = useState(false);
   const [distribution, setDistribution] = useState<Distribution | null>(null);
+  const [narration, setNarration] = useState<Narration | null>(null);
+  const [picked, setPicked] = useState<number | null>(null);
   const [shareNote, setShareNote] = useState<string | null>(null);
   const [live, setLive] = useState<TunerState | null>(null);
   const started = useRef(Date.now());
@@ -126,7 +128,8 @@ export function MiddlesScreen({ session, palette, soundOn, onOpenSettings, onSki
       const seconds = Math.round((Date.now() - started.current) / 1000);
       submitAttempt(session, loaded.date, { answer: lastAnswer, tries: triesOf(today) }, seconds)
         .then((r) => setDistribution(r.distribution))
-        .catch(() => fetchDistribution(loaded.date).then(setDistribution).catch(() => undefined));
+        .catch(() => fetchDistribution(loaded.date).then(setDistribution).catch(() => undefined))
+        .finally(() => fetchNarration(session, loaded.date).then(setNarration).catch(() => undefined));
     }
     return () => cancelAnimation(swing);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -259,6 +262,31 @@ export function MiddlesScreen({ session, palette, soundOn, onOpenSettings, onSki
             </Text>
           ) : null}
           {loaded.source === 'local' ? <Text style={styles.small}>{texts.triadOffline}</Text> : null}
+          {narration ? (
+            <View style={styles.voices} testID="middles-narration">
+              <Text style={styles.voice}>
+                <Text style={styles.voiceName}>{texts.voiceMonk} </Text>
+                {narration.monk}
+              </Text>
+              <Text style={styles.voice}>
+                <Text style={styles.voiceName}>{texts.voiceAnalyst} </Text>
+                {narration.analyst}
+              </Text>
+              <Text style={[styles.small, { marginTop: 8 }]}>{picked === null ? texts.whoLiesQuestion : picked === narration.truth ? texts.whoLiesRight : texts.whoLiesWrong(narration.truth)}</Text>
+              {narration.statements.map((s, i) => (
+                <Pressable
+                  key={i}
+                  onPress={() => picked === null && setPicked(i)}
+                  disabled={picked !== null}
+                  testID={`statement-${i}`}
+                  style={[styles.statement, picked !== null && i === narration.truth && styles.statementTrue, picked === i && i !== narration.truth && styles.statementLie]}
+                >
+                  <Text style={styles.statementText}>{s}</Text>
+                </Pressable>
+              ))}
+              <Text style={styles.aiLabel}>{texts.aiLabel}</Text>
+            </View>
+          ) : null}
         </View>
       )}
 

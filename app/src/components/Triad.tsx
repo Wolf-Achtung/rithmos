@@ -130,5 +130,13 @@ export function makeTriadStyles(p: Palette, width: number, digits: number, slots
     box: { width: 14, height: 14, borderRadius: radius.box, backgroundColor: p.trackEmpty },
     boxWrong: { backgroundColor: p.wrong },
     boxSolved: { backgroundColor: p.accent },
+    voices: { width: '100%', gap: spacing.sm, marginTop: spacing.md },
+    voice: { fontFamily: fonts.text, fontSize: type.small.fontSize + 1, lineHeight: type.small.lineHeight + 4, color: p.inkSoft },
+    voiceName: { fontFamily: fonts.textMedium, color: p.ink },
+    statement: { borderRadius: radius.card, borderWidth: 1, borderColor: p.border, backgroundColor: p.surface, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+    statementTrue: { borderColor: p.accent },
+    statementLie: { borderColor: p.wrong, opacity: 0.6 },
+    statementText: { fontFamily: fonts.text, fontSize: type.small.fontSize + 1, lineHeight: type.small.lineHeight + 4, color: p.ink },
+    aiLabel: { fontFamily: fonts.text, fontSize: 11, color: p.muted, textAlign: 'center', marginTop: spacing.xs },
   });
 }

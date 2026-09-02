@@ -145,3 +145,22 @@ export async function submitAttempt(session: Session, date: string, attempt: Att
 export async function fetchDistribution(date: string): Promise<Distribution> {
   return request(`/v1/puzzles/${date}/distribution`);
 }
+
+/** The narrator (Stufe 3): two voices and three explanations, one true. Null when the server has none. */
+export interface Narration {
+  readonly monk: string;
+  readonly analyst: string;
+  readonly statements: readonly string[];
+  readonly truth: number;
+  readonly model: string;
+  readonly version: number;
+}
+
+export async function fetchNarration(session: Session, date: string): Promise<Narration | null> {
+  try {
+    return await request<Narration>(`/v1/puzzles/${date}/narration`, { token: session.token });
+  } catch (e) {
+    if (e instanceof ApiError && (e.status === 404 || e.status === 403)) return null;
+    throw e;
+  }
+}
