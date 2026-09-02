@@ -1,7 +1,9 @@
 # RITHMOS
 
 Mobilspiel nach dem mittelalterlichen Zahlenkampfspiel *Rithmomachia* — von ἀριθμός,
-der Zahl. Das Tagesrätsel heißt **Middles** und ist das Produkt.
+der Zahl. Das Tagesrätsel ist das Produkt und trägt den Namen des Spiels: **Rithmos**,
+erreichbar unter rithmos.de. (Der Arbeitsname „Middles“ entfiel im September 2026;
+im Code heißen die Module weiter `middles`.)
 
 Diese Datei ist die verbindliche Projektbeschreibung. Lies sie zu Beginn jeder
 Sitzung vollständig. Was hier steht, gilt; Abweichungen sind ein Wolf-Ping.
@@ -61,7 +63,7 @@ Rechenlast.
 | Stufe | Inhalt | Zustand |
 |---|---|---|
 | **0** | Engine, API, Konten, Generator, Deploy-Kette | fertig, bleibt unverändert |
-| **1** | **Middles ohne Brett.** Ein Rätsel am Tag, drei Versuche, teilbares Ergebnis, Dreiklang zum Anhören, ein Satz dazu, wo dieses Mittel heute in der Welt steckt (fester Text) | gebaut |
+| **1** | **Das Tagesrätsel ohne Brett.** Ein Rätsel am Tag, drei Versuche, teilbares Ergebnis, Dreiklang zum Anhören, ein Satz dazu, wo dieses Mittel heute in der Welt steckt (fester Text) | gebaut |
 | **2** | Progression: erst arithmetisch, dann geometrisch, dann musikalisch, dann gemischt („welches Mittel?"), dann vier Zahlen mit zwei Mitteln. Deckung je Mittelart über Wochen | **jetzt**, auf dem Gerät gebaut |
 | **3** | Die Erzählerin: nach dem Lösen zwei Stimmen (Mönch, Analystin) und „Wer lügt?“ mit drei Erklärungen, eine stimmt. Der Generator liefert Wahrheit und Lügen als Fakten, das Modell formuliert, der Server prüft jede Zahl. Cachebar pro Rätsel, Tageslimit, AI-Act-Kennzeichnung | gebaut, Schlüssel auf Railway offen |
 | **4** | Das kleine Brett: 4 × 8, vier Steine je Seite (Weiß 2 · 4 · 6 · 8, Schwarz 3 · 6 · 9 · 12), nur die Begegnung, Sieg = eine Harmonie im gegnerischen Feld. Begründung vor dem Zug aus Engine-Angeboten, vier Felder, Gegner mit offenen Karten (fester Text). Sofort offen, ohne Stufensperre | gebaut; Freitext-Begründung über das Modell offen |
@@ -72,7 +74,7 @@ Die vorhandene Brett-Oberfläche aus der ersten Fassung (`app/src/screens/GameSc
 `Board`, `SetupScreen`) bleibt im Repo, verschwindet aber aus der Navigation, bis
 Stufe 4 sie in vereinfachter Form zurückholt.
 
-### Middles, Stufe 1, genau
+### Das Tagesrätsel, Stufe 1, genau
 
 - Ein Bildschirm. Drei große Felder, zwei Zahlen stehen, die dritte fehlt. Die
   Frage lautet „Welche Zahl gehört in die Mitte, nach dem Muster von 2 · 4 · 6?“:
@@ -87,7 +89,9 @@ Stufe 4 sie in vereinfachter Form zurückholt.
 - Richtig: die drei Zahlen schwingen zusammen, der Dreiklang erklingt, ein Satz
   erscheint. Ein Satz, nicht drei.
 - Serie („12 Tage in Folge") und ein teilbares Ergebnis in Textform:
-  `Middles Nº 47 · 2/3` plus drei Kästchen. Kein Emoji im Produkt.
+  `Rithmos Nº 47 · 2/3` plus drei Kästchen plus `rithmos.de`. Die Adresse steht in
+  jedem geteilten Ergebnis, auch bei der Kette; sie ist der Wachstumsweg. Kein Emoji
+  im Produkt.
 - Verteilung nach dem Lösen wie bisher, über die API.
 - Ohne Server läuft alles lokal, wie bisher. Die Rätsel kommen dann aus
   `jobs/src/middles.ts` im Bundle.
@@ -332,7 +336,7 @@ freiwillig, überspringbar und blockiert nie einen Zug. Gehört zu Stufe 4.
 Die Kennzahl ist nicht ELO, sondern: **Wie viel von dem, was die Engine sieht, sieht
 der Spieler ohne Hilfe?**
 
-**In Middles (Stufe 2):** Trefferquote je Mittelart, gleitendes Fenster über die
+**Im Tagesrätsel und in der Übung (Stufe 2):** Trefferquote je Mittelart, gleitendes Fenster über die
 letzten fünfzig Rätsel, als Trend über Wochen. Wer arithmetisch bei 90 % steht und
 musikalisch bei 40 %, sieht das — und die Progression zieht die Mittelart nach vorn,
 die hinterherhinkt.
@@ -402,7 +406,7 @@ normalisierte Frage und die Prompt-Version.
 | Zugvalidierung, Harmonieerkennung, Siegprüfung | Engine |
 | Rätselerzeugung und -verifikation | Generator und Solver, deterministisch |
 | Rätselprüfung auf dem Server | Vergleich mit der gespeicherten Lösung, keine Engine im Server |
-| Deckungsgrad | Engine, beziehungsweise Trefferquote in Middles |
+| Deckungsgrad | Engine, beziehungsweise Trefferquote im Tagesrätsel |
 | `verifyClaim`, Grund für abgelehnten Schlag, Absicht des Gegners | Engine |
 | Erzählerin, Coach, Regelchat, Übersetzung Spielertext → Behauptung | Sprachmodell |
 
@@ -430,7 +434,7 @@ Die verwendete Regelfassung wird im Spiel sichtbar genannt, mit Quellenangabe.
 - **Regressionskorpus** fester Stellungen
 - **Generator:** dreißig Tage Rätsel, jedes eindeutig, der mittlere Stein zieht
 - **API:** pytest gegen ein echtes PostgreSQL
-- **Middles-Oberfläche:** Store-Logik als reine Funktionen getestet; Web-Build per
+- **Rätsel-Oberfläche:** Store-Logik als reine Funktionen getestet; Web-Build per
   Chromium-Screenshot durchgespielt
 - **Modellausgaben** — gegen das Schema validiert, jede Zahl gegen das Rätsel
   geprüft, bevor sie angezeigt wird
@@ -483,13 +487,13 @@ committen — immer Branch, dann Pull Request. Tagesreport statt Zwischenmeldung
 
 ## 13. Was sich gegenüber der ersten Fassung geändert hat
 
-- Middles war Phase 3, das Vollspiel Phase 2. Jetzt ist Middles Stufe 1 und das
+- Das Tagesrätsel war Phase 3, das Vollspiel Phase 2. Jetzt ist es Stufe 1 und das
   Produkt; das Brett kommt klein in Stufe 4 und voll in Stufe 5.
 - Die Erzählerin ist neu und die erste KI-Funktion. Regelchat, Begründungsmodus und
   offene Karten rücken hinter das Brett, weil sie ein Brett voraussetzen.
 - Klang ist Teil des Produkts.
 - Ein Abschnitt Gestaltung ist neu; die Richtung ist ein Wolf-Ping.
-- Die Deckung bekommt eine Middles-Form (Trefferquote je Mittelart), die Brettform
+- Die Deckung bekommt eine Rätselform (Trefferquote je Mittelart), die Brettform
   bleibt.
 - Der Stack nennt `expo-audio` und die Deploy-Dateien, die inzwischen existieren.
 - Unverändert: Regelfassung, Engine, API, Generator, Zuständigkeitsgrenze der KI,
@@ -499,3 +503,6 @@ committen — immer Branch, dann Pull Request. Tagesreport statt Zwischenmeldung
   vier Angebote machten ein Multiple-Choice daraus, das Brett lag hinter Tagen
   Progression, und nirgends stand, wozu das alles. Daraus die Grundsätze
   „Die Rückmeldung lehrt die Regel“, „Eingabe verlangt Denken“ und der Einstieg.
+- Vierte Korrektur, September 2026: der Produktname. „Middles“ war ein generisches
+  englisches Wort, unauffindbar und ohne Bezug zur Adresse. Das Tagesrätsel heißt
+  jetzt Rithmos wie das Spiel, und jeder Teilen-Text endet mit rithmos.de.
