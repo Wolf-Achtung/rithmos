@@ -11,11 +11,12 @@ import type { HarmonyKind } from '../../../engine/harmony';
 import { canLay, chainShareText, generateChain, linkKind } from '../../../jobs/src/chain';
 import type { ChainPuzzle } from '../../../jobs/src/chain';
 import { isoDate, middlesNumber } from '../../../jobs/src/middles';
-import { Numeral, PillButton, makeTriadStyles } from '../components/Triad';
+import { Gaps, Numeral, PillButton, makeTriadStyles } from '../components/Triad';
+import { gapLine } from '../middles/logic';
 import { chordFrequencies } from '../middles/chord';
 import { playChord } from '../middles/sound';
 import { store } from '../storage';
-import { kindName, texts } from '../texts';
+import { patternShort, texts } from '../texts';
 import { fonts, radius, spacing, type } from '../theme';
 import type { Palette } from '../theme';
 
@@ -130,12 +131,18 @@ export function ChainScreen({ palette, soundOn }: Props) {
             return (
               <View key={n} style={own.link}>
                 <Numeral value={n} styles={styles} swing={swing} rate={n / chain[0]!} accent={i >= 2 ? 'accent' : undefined} />
-                {kind ? <Text style={own.kind}>{kindName[kind]}</Text> : <Text style={own.kind}> </Text>}
+                {kind ? <Text style={own.kind}>{patternShort[kind]}</Text> : <Text style={own.kind}> </Text>}
               </View>
             );
           })
         )}
       </View>
+
+      {chain.length >= 3 ? (() => {
+        const [a, b, c] = chain.slice(-3) as [number, number, number];
+        const kind = linkKind(chain.slice(0, -1), c);
+        return kind ? <Gaps line={gapLine(kind, a, b, c)} styles={styles} testID="chain-gaps" /> : null;
+      })() : <View style={styles.gaps} />}
 
       <Text style={styles.sentence} testID="chain-sentence">
         {sentence}
