@@ -1,10 +1,14 @@
 # RITHMOS
 
 Mobilspiel nach dem mittelalterlichen Zahlenkampfspiel *Rithmomachia* — von ἀριθμός,
-der Zahl. Das Tagesrätsel im Spiel heißt **Middles**.
+der Zahl. Das Tagesrätsel heißt **Middles** und ist das Produkt.
 
 Diese Datei ist die verbindliche Projektbeschreibung. Lies sie zu Beginn jeder
 Sitzung vollständig. Was hier steht, gilt; Abweichungen sind ein Wolf-Ping.
+
+Zweite Fassung, September 2026. Die erste Fassung setzte das Vollspiel an den
+Anfang; nach Phase 3 stellte sich das als falsch heraus (Abschnitt 13). Engine,
+API und Regelfassung sind unverändert übernommen.
 
 ---
 
@@ -16,6 +20,19 @@ Mittelwerte, mit denen heute Durchschnitte, Wachstumsraten und Klassifikationsmo
 bewertet werden. Ein tausend Jahre altes Spiel trainiert damit unverändert die
 Fähigkeit, die wir gerade an Maschinen abgeben: verborgene Proportionsstruktur in
 einem Zahlenfeld zu sehen.
+
+**Der Kern in einem Satz, den ein Fremder in zehn Sekunden versteht:**
+
+> Drei Zahlen. Eine fehlt. Welche macht die Reihe harmonisch?
+
+2 – ? – 6: die Vier, arithmetisch. 5 – ? – 20: die Zehn, geometrisch.
+6 – ? – 12: die Acht, musikalisch. Das ist die ganze Substanz. Alles andere —
+Brett, Steine, Schlagarten — ist Ausbau für die, die tiefer wollen.
+
+**Was kein anderes Zahlenspiel kann:** „Musikalisch" ist kein Name, sondern wörtlich.
+6 : 8 : 12 sind die Frequenzverhältnisse Quarte und Quinte, 6 : 12 die Oktave.
+Jede Harmonie dieses Spiels lässt sich hören. Der Dreiklang nach dem Lösen gehört
+zum Produkt, nicht zur Dekoration.
 
 **Produktversprechen:** Dieses Spiel benutzt KI, um eine menschliche Fähigkeit
 aufzubauen statt sie zu ersetzen — und misst, ob das gelingt.
@@ -29,48 +46,94 @@ Begegnet dir ein Feature, das dieser Regel widerspricht, ist das ein Wolf-Ping u
 keine Ermessensfrage.
 
 Das historische Spiel starb nicht an fehlendem Reiz, sondern an der Rechenlast.
-Alle bekannten digitalen Umsetzungen bilden Brett und Regeln korrekt ab — und
-reproduzieren damit genau das Hindernis. Rithmos beseitigt es.
+Die erste Fassung dieses Projekts nahm die Rechenlast weg und ließ die
+Verständnislast stehen: 48 Steine, vier Schlagarten, drei Harmonien mit
+Lagebedingungen auf dem ersten Bildschirm. Das tut heute niemand mehr. Rithmos
+beseitigt beides — in dieser Reihenfolge: erst die Verständnislast, dann die
+Rechenlast.
 
 ---
 
-## 2. Stack
+## 2. Das Erlebnis
+
+### Stufen
+
+| Stufe | Inhalt | Zustand |
+|---|---|---|
+| **0** | Engine, API, Konten, Generator, Deploy-Kette | fertig, bleibt unverändert |
+| **1** | **Middles ohne Brett.** Ein Rätsel am Tag, drei Versuche, teilbares Ergebnis, Dreiklang zum Anhören, ein Satz dazu, wo dieses Mittel heute in der Welt steckt (fester Text) | **jetzt** |
+| **2** | Progression: erst arithmetisch, dann geometrisch, dann musikalisch, dann gemischt („welches Mittel?"), dann vier Zahlen mit zwei Mitteln. Deckung je Mittelart über Wochen | danach |
+| **3** | Die Erzählerin: der Satz nach dem Lösen kommt vom Sprachmodell, in zwei Stimmen, cachebar pro Rätsel. Erste KI-Funktion, AI-Act-Kennzeichnung | danach |
+| **4** | Das kleine Brett: 4 × 8, acht Steine, eine Schlagart, Sieg = eine Harmonie legen. Begründungsmodus, Gegner mit offenen Karten | wer Stufe 2 durchhat |
+| **5** | Das volle Brett nach Mebben, Regelchat, Deckung auf dem Brett | für die, die es wollen |
+| **6** | Abo, serverseitige Belegprüfung. **Wolf-Ping vorher** | zuletzt |
+
+Die vorhandene Brett-Oberfläche aus der ersten Fassung (`app/src/screens/GameScreen`,
+`Board`, `SetupScreen`) bleibt im Repo, verschwindet aber aus der Navigation, bis
+Stufe 4 sie in vereinfachter Form zurückholt.
+
+### Middles, Stufe 1, genau
+
+- Ein Bildschirm. Drei große Felder, zwei Zahlen stehen, die dritte fehlt. Vier
+  Angebote zum Antippen. Keine Koordinaten, keine Steine, keine Zugregeln.
+- Drei Versuche. Nach dem dritten Fehlversuch wird aufgelöst.
+- Richtig: die drei Zahlen schwingen zusammen, der Dreiklang erklingt, ein Satz
+  erscheint. Ein Satz, nicht drei.
+- Serie („12 Tage in Folge") und ein teilbares Ergebnis in Textform:
+  `Middles Nº 47 · 2/3` plus drei Kästchen. Kein Emoji im Produkt.
+- Verteilung nach dem Lösen wie bisher, über die API.
+- Ohne Server läuft alles lokal, wie bisher. Die Rätsel kommen dann aus
+  `jobs/src/middles.ts` im Bundle.
+- Die vier Angebote enthalten immer die beiden anderen Mittel als Ablenker,
+  wenn sie ganzzahlig sind. Wer 9 statt 8 tippt, hat arithmetisch gedacht — das
+  ist die Rückmeldung wert.
+
+### Gestaltung
+
+Die Gestaltungsrichtung wird einmal gewählt und dann nicht mehr verhandelt. Sie
+steht in `app/src/theme.ts` als Tokens; nichts in der App trägt eine Farbe oder
+Schrift, die dort nicht steht.
+
+Grundsätze, unabhängig von der Richtung:
+
+- Ein Satz pro Bildschirm. Regelbuch-Ton („eigene Steine als Angreifer antippen")
+  kommt nicht vor. Wenn ein Bildschirm eine Anleitung braucht, ist der Bildschirm
+  falsch.
+- Zahlen sind das Bild. Sie sind groß, gesetzt, und haben Luft.
+- Klang ist Teil der Rückmeldung, nie Hintergrund. Stumm schaltbar.
+- Bewegung erklärt, sie schmückt nicht: die Zahlen schwingen zusammen, wenn eine
+  Harmonie schließt. Sonst bewegt sich nichts.
+- Dunkel- und Hellmodus von Anfang an.
+- Keine Chips-Reihen zur Konfiguration auf dem ersten Bildschirm. Einstellungen
+  liegen hinter einem Zahnrad.
+
+---
+
+## 3. Stack
 
 | Schicht | Wahl |
 |---|---|
 | App | Expo, TypeScript — SDK 57, React Native 0.86, React 19.2.3 |
-| Web | dasselbe Codebase über react-native-web 0.21 |
-| Brettdarstellung | **normale React-Native-Views + Reanimated. Keine Spiel-Engine.** |
+| Web | dasselbe Codebase über react-native-web 0.21, Auslieferung Netlify |
+| Darstellung | **normale React-Native-Views + Reanimated. Keine Spiel-Engine.** |
+| Klang | `expo-audio` für die Dreiklänge; auf dem Web die Web Audio API. Töne werden erzeugt, nicht als Dateien mitgeliefert |
 | Engine | eigenständiges TypeScript-Paket, keine React-, keine I/O-Importe |
-| Backend | FastAPI auf Railway |
-| Datenbank | PostgreSQL auf Railway |
-| Abo | `react-native-purchases` (RevenueCat), braucht Development Build |
-| Auslieferung | EAS Build und EAS Submit, Web-Build nach Netlify |
-
-**Zur Brettdarstellung:** Ein 8 × 16-Feld mit rund fünfzig Steinen und
-rundenbasiertem Ablauf ist eine Oberfläche, kein Spiel-Loop.
-`react-native-game-engine` wird seit 2020 nicht gepflegt und scheidet aus. Skia ist
-erst die richtige Antwort, wenn eine Messung auf einem günstigen Android-Gerät zeigt,
-dass normale Views zu langsam sind.
+| Backend | FastAPI auf Railway, `api/` |
+| Datenbank | PostgreSQL auf Railway, Schema als SQL in `api/schema/` |
+| Rätsel | nächtlicher Generator in `jobs/`, verifiziert mit dem Solver |
+| Abo | `react-native-purchases` (RevenueCat), braucht Development Build. Stufe 6 |
+| Auslieferung | EAS Build und EAS Submit; Web-Build nach Netlify über `netlify.toml` |
 
 ### Verzeichnisse
 
 ```
 /engine     reines TypeScript, keine React-, keine I/O-Importe
    rules/   die Regelfassung als Daten
-   board.ts     Brett, Steine, Werte
-   moves.ts     Zugerzeugung, Zugvalidierung
-   capture.ts   die vier Schlagarten
-   explain.ts   warum ein versuchter Schlag nicht zulässig ist
-   harmony.ts   Proportionserkennung und Siegbedingungen
-   claims.ts    Prüfung strukturierter Behauptungen
-   search.ts    Gegner, Stärke parametrisierbar, gibt Absicht mit heraus
-   solver.ts    Rätselverifikation
+   board.ts moves.ts capture.ts explain.ts harmony.ts claims.ts search.ts solver.ts
 /app        Expo-App
-/api        FastAPI: Konten, Abo, KI-Proxy, Rätselauslieferung
-/ai         Provider-Adapter, Prompts, Übersetzer Sprache→Behauptung
+/api        FastAPI: Konten, Deckung, Rätsel, später KI-Proxy und Abo
 /jobs       nächtlicher Rätselgenerator (Node, nutzt /engine)
-/infra      docker-compose.yml, .env.example, Dump-Skripte
+/infra      docker-compose.yml, .env.example, Dump-Skript
 ```
 
 `engine/` ist das Kronjuwel und hat keine Abhängigkeit zu React Native, Datenbank,
@@ -78,15 +141,21 @@ Hosting oder Modellanbieter. **Ein Test prüft die Importe von `engine/` und sch
 fehl, sobald dort etwas aus `react`, `react-native`, `fs`, `http` oder einem
 Anbieter-SDK importiert wird.**
 
+Das API-Image wird aus dem `Dockerfile` im Repo-Root gebaut; Railway baut aus dem
+Root-Verzeichnis, das Root Directory des Dienstes bleibt leer. Der Generator hat
+sein eigenes `jobs/Dockerfile` für den Cron-Dienst.
+
 ---
 
-## 3. Die Regelfassung
+## 4. Die Regelfassung
 
 Verbindlich: **Peter Mebben nach Selenus 1616** —
 https://jducoeur.org/game-hist/mebben.ryth.html
 
 Die Regeln liegen als **Daten** in `engine/rules/`, nicht als Bedingungen im Code
-verstreut. Andere Fassungen sollen später als Modus nachrüstbar sein.
+verstreut. Andere Fassungen sollen später als Modus nachrüstbar sein. Punkte, die
+gegen die Quelle noch nicht geprüft sind, stehen dort unter `unverified` und werden
+im Regelbildschirm angezeigt.
 
 ### Brett und Steine
 
@@ -105,8 +174,9 @@ Mebben zählt Start- und Zielfeld mit. „Ins zweite Feld" heißt **ein** Schrit
 | Quadrat | ins vierte Feld | 3 | alle Richtungen inkl. diagonal |
 | Pyramide | — | — | nach ihren Bestandteilen |
 
-Das ist die wahrscheinlichste Fehlerquelle im ganzen Projekt. Kommentar an die
-Zugerzeugung, eigener Testfall im Korpus.
+Das ist die wahrscheinlichste Fehlerquelle im ganzen Projekt — sie ist in der
+ersten Fassung einmal in der Anzeige aufgetreten und hat seitdem einen eigenen
+Wortlaut-Test.
 
 ### Schlagarten
 
@@ -134,214 +204,143 @@ im Quadrat, **mit gleichem Abstand zueinander**.
 
 ### Die drei Harmonien
 
-| Harmonie | Bedingung | Testbeispiel | Was b tatsächlich ist |
-|---|---|---|---|
-| Arithmetisch | b − a = c − b | 2, 4, 6 | arithmetisches Mittel von a und c |
-| Geometrisch | a : b = b : c | 5, 10, 20 | geometrisches Mittel von a und c |
-| Musikalisch | a : c = (b − a) : (c − b) | 6, 8, 12 | harmonisches Mittel von a und c |
+| Harmonie | Bedingung | Testbeispiel | Was b tatsächlich ist | Klang |
+|---|---|---|---|---|
+| Arithmetisch | b − a = c − b | 2, 4, 6 | arithmetisches Mittel von a und c | 1 : 2 : 3, Oktave und Quinte darüber |
+| Geometrisch | a : b = b : c | 5, 10, 20 | geometrisches Mittel von a und c | 1 : 2 : 4, zwei Oktaven |
+| Musikalisch | a : c = (b − a) : (c − b) | 6, 8, 12 | harmonisches Mittel von a und c | 3 : 4 : 6, Quarte und Quinte, Oktave außen |
 
-Die rechte Spalte ist nachgerechnet und stimmt für alle drei. Daraus die
-Testvorschrift: **Implementiere die Erkennung einmal über Mebbens Bedingungen und
-einmal über die Mittelwertformeln. Beide müssen für jede Stellung dasselbe liefern;
-Abweichung bricht den Testlauf.**
+Die Mittelwert-Spalte ist nachgerechnet und stimmt für alle drei. Daraus die
+Testvorschrift, die in `engine/harmony.ts` umgesetzt ist: **Die Erkennung läuft
+einmal über Mebbens Bedingungen und einmal über die Mittelwertformeln. Beide müssen
+für jede Stellung dasselbe liefern; Abweichung bricht den Testlauf.**
 
-Dieser doppelte Prüfweg ist zugleich ein Verkaufsargument und gehört in den Store-Text.
-
----
-
-## 4. Die Laufzeitanforderung an `harmony.ts`
-
-Der wichtigste technische Punkt des Projekts.
-
-Die Funktion, die alle erreichbaren Harmonien einer Stellung aufzählt, hat **zwei
-Kunden**: den Deckungsgrad (Abschnitt 6) und die Bewertungsfunktion des Gegners.
-
-Das ist kein Zufall. Der Sieg in diesem Spiel ist **konstruktiv, nicht destruktiv** —
-man baut eine Anordnung, statt einen König zu schlagen. Materialzählung, die Grundlage
-jeder klassischen Spielengine, ist damit fast wertlos: Man kann materiell führen und
-beliebig weit vom Sieg entfernt sein. Eine brauchbare Bewertung braucht ein Maß für
-**Harmonienähe** — und genau das ist diese Aufzählung. Deshalb haben die bekannten
-Umsetzungen dieses Spiels keinen brauchbaren Gegner.
-
-Also: `harmony.ts` wird nicht nur auf Korrektheit gebaut, sondern **gemessen**.
-Ein Benchmark für eine typische Mittelspielstellung, Ergebnis im Repo festgehalten.
-Zu langsam für einen Suchbaum ist ein Wolf-Ping, kein stiller Kompromiss.
+Die Klang-Spalte ist die Grundlage des Dreiklangs. Die Grundfrequenz ist frei, die
+Verhältnisse sind es nicht.
 
 ---
 
-## 5. Die claims-Schicht
+## 5. Die Laufzeitanforderung an `harmony.ts`
+
+Die Funktion, die alle erreichbaren Harmonien einer Stellung aufzählt, hat zwei
+Kunden: den Deckungsgrad auf dem Brett und die Bewertungsfunktion des Gegners.
+
+Der Sieg in diesem Spiel ist **konstruktiv, nicht destruktiv** — man baut eine
+Anordnung, statt einen König zu schlagen. Materialzählung ist damit fast wertlos.
+Eine brauchbare Bewertung braucht ein Maß für **Harmonienähe**, und genau das ist
+diese Aufzählung. Deshalb haben die bekannten Umsetzungen dieses Spiels keinen
+brauchbaren Gegner.
+
+`harmony.ts` wird gemessen, Ergebnis in `engine/BENCHMARK.md`. Zu langsam für einen
+Suchbaum ist ein Wolf-Ping, kein stiller Kompromiss.
+
+---
+
+## 6. Die claims-Schicht
 
 Der Spieler soll vor einem Zug in eigenen Worten sagen können, *warum*. Das System
 prüft getrennt: ob der Zug gut ist (weiß die Engine) und ob die Begründung zutrifft.
 
 **Die Wahrheit kommt immer aus der Engine, nie aus dem Sprachmodell.** Das Modell
-übersetzt nur Freitext in eine prüfbare Behauptung.
+übersetzt nur Freitext in eine prüfbare Behauptung. `verifyClaim` in
+`engine/claims.ts` ist eine reine Funktion, deterministisch und getestet.
 
-```ts
-type Claim =
-  | { kind: 'capture_threat'; from: PieceId; to: PieceId;
-      method?: 'meeting' | 'ambush' | 'assault' | 'siege' }
-  | { kind: 'harmony_reachable'; pieces: PieceId[];
-      harmony?: 'arithmetic' | 'geometric' | 'musical'; withinMoves: number }
-  | { kind: 'defends'; piece: PieceId; against: PieceId }
-  | { kind: 'escapes'; piece: PieceId; from: PieceId }
-  | { kind: 'blocks_harmony'; opponentPieces: PieceId[] }
-  | { kind: 'unverifiable'; reason: string }
-
-type ClaimResult = { holds: boolean; evidence: string; checkedAt: 'before' | 'after' }
-
-function verifyClaim(pos: Position, move: Move, claim: Claim): ClaimResult
-```
-
-`verifyClaim` ist eine reine Funktion, deterministisch und vollständig getestet,
-bevor ein Sprachmodell sie zu sehen bekommt.
-
-**Regeln für die Übersetzung, nicht verhandelbar:**
-
-1. Das Modell bekommt Stellung, geplanten Zug und Spielertext — **nicht** die
-   Bewertung des Zuges. Sonst leitet es die Begründung aus dem Urteil ab.
-2. Ausschließlich strukturierte Ausgabe nach obigem Schema. Kein Fließtext.
-3. Nicht übersetzbar → `unverifiable`. Die App sagt dann ehrlich „Das kann ich nicht
-   gegen die Stellung prüfen" und wertet nichts.
-4. Nennt die Behauptung Steine, die es nicht gibt: einmal neu übersetzen, dann
-   `unverifiable`.
-
-### Die vier Felder der Rückmeldung
+Die vier Felder der Rückmeldung:
 
 | | Zug ist stark | Zug ist schwach |
 |---|---|---|
-| **Begründung trifft zu** | Verstanden | Rechenfehler — richtig gedacht, falsch gerechnet |
+| **Begründung trifft zu** | Verstanden | Rechenfehler |
 | **Begründung trifft nicht zu** | **Glück** | Missverständnis |
 
-Das Feld **Glück** ist der Grund, warum es dieses Feature gibt: Kein klassisches Spiel
-kann es finden, weil die Engine nur sieht, dass der Zug gut war. Erst der Sprachanteil
-macht sichtbar, dass jemand aus dem falschen Grund richtig gezogen hat.
-
-Der Ton in allen vier Feldern ist neugierig, nie prüfend. Bei „Glück" darf sich der
-Spieler nicht bestraft fühlen — er hat einen guten Zug gemacht. Bei Unsicherheit über
-eine Formulierung: Wolf-Ping. Der Modus ist immer freiwillig, überspringbar und
-blockiert nie einen Zug.
+Das Feld **Glück** ist der Grund, warum es dieses Feature gibt. Der Ton in allen vier
+Feldern ist neugierig, nie prüfend. Die Formulierungen legt Wolf fest. Der Modus ist
+freiwillig, überspringbar und blockiert nie einen Zug. Gehört zu Stufe 4.
 
 ---
 
-## 6. Die Maschinen-Deckung
+## 7. Die Maschinen-Deckung
 
 Die Kennzahl ist nicht ELO, sondern: **Wie viel von dem, was die Engine sieht, sieht
 der Spieler ohne Hilfe?**
 
-Die Harmonie-Anzeige ist ein Regler:
+**In Middles (Stufe 2):** Trefferquote je Mittelart, gleitendes Fenster über die
+letzten fünfzig Rätsel, als Trend über Wochen. Wer arithmetisch bei 90 % steht und
+musikalisch bei 40 %, sieht das — und die Progression zieht die Mittelart nach vorn,
+die hinterherhinkt.
 
-| Stufe | Anzeige |
-|---|---|
-| 3 | alle erreichbaren Harmonien hervorgehoben — der Einstieg |
-| 2 | nur die Anzahl, nicht wo |
-| 1 | nur ein Hinweis, dass eine existiert |
-| 0 | nichts |
-
-Ab Stufe 1 markiert der Spieler vor dem Zug Felder, von denen er glaubt, dass sie eine
-erreichbare Harmonie bilden. Die Engine gleicht ab.
+**Auf dem Brett (Stufe 4 und 5):** Der Spieler markiert vor dem Zug Felder, von denen
+er glaubt, dass sie eine erreichbare Harmonie bilden. Die Engine gleicht ab.
 
 ```
 Deckung eines Zuges = |markiert ∩ tatsächlich| / |tatsächlich|
 ```
 
-Gleitendes Fenster über die letzten fünfzig Züge, Verlauf pro Nutzer, angezeigt als
-Trend über Wochen — nie als Momentwert.
-
-**Sie funktioniert vollständig ohne Sprachmodell.** Deshalb steht das
-Alleinstellungsmerkmal in einer auslieferbaren App, bevor ein Cent Modellkosten
-anfällt.
+Beides funktioniert vollständig ohne Sprachmodell und wird über Geräte hinweg
+gespeichert (`PUT /v1/coverage`, seit Phase 3).
 
 ---
 
-## 7. Die erklärenden Funktionen
+## 8. Die erklärenden Funktionen
 
 Alle nach demselben Muster: **Die Engine liefert den Sachverhalt, das Modell
-formuliert ihn.** Zwei davon laufen auch ohne Modell mit festem Text — deshalb
-kommt der deterministische Teil in Phase 2 und die Ausformulierung in Phase 4.
+formuliert ihn.** Jede läuft zuerst mit festem Text und bekommt das Modell erst,
+wenn der feste Text sich bewährt hat.
 
-### 7.1 Der Fehlschlag-Erklärer
+### 8.1 Die Erzählerin — Stufe 1 fest, Stufe 3 Modell
 
-Bei einem unzulässigen Schlag sagt die App in einem Satz, **welche Bedingung fehlt**:
+Nach jedem gelösten Rätsel ein Satz: welches Mittel es war und wo es heute in der
+Welt steckt. Zwei Stimmen, jederzeit umschaltbar, technisch eine Prompt-Variante:
 
-> „Angriff über zwei Felder: 5 × 2 = 10, dein Ziel hat 15. Mit einem Feld Abstand
-> würde es passen."
+> **Mönch:** „Du hast eine musikalische Proportion geschlossen. Boethius nannte sie
+> so, weil sie den Abstand selbst ins Verhältnis setzt."
+>
+> **Analystin:** „8 ist das harmonische Mittel von 6 und 12 — so berechnet man die
+> Durchschnittsgeschwindigkeit, wenn du hin 6 und zurück 12 fährst. Und so bewertet
+> man Klassifikationsmodelle: der F1-Score ist genau dieses Mittel."
 
-`engine/explain.ts` liefert das strukturiert: welche Schlagart geprüft wurde und
-woran es scheiterte. Je Schlagart ein Testfall.
+Die Zuordnung Harmonie → Anwendungsfall liegt als Datentabelle in
+`engine/rules/applications.ts`. Das Modell darf daraus wählen und formulieren, nicht
+erfinden. Ein Satz pro Rätsel, cachebar über die Rätsel-ID; die Kosten sind damit
+pro Tag begrenzt, nicht pro Spieler.
 
-Das ist keine Bequemlichkeit, sondern eine Vertrauensfrage. Die einzige dokumentierte
-Nutzerkritik im gesamten Feld vergleichbarer Umsetzungen lautet, dass gültige Schläge
-nicht registriert würden. In einem Zahlenspiel kann der Spieler nicht unterscheiden,
-ob das Programm falsch rechnet oder er die Regel falsch verstanden hat — und diese
-Unsicherheit zerstört das Vertrauen in alles andere.
+### 8.2 Der Fehlschlag-Erklärer — Stufe 4
 
-### 7.2 Der Gegner mit offenen Karten
+`engine/explain.ts` liefert bei einem abgelehnten Schlag strukturiert, welche
+Bedingung fehlt. Fester Text existiert seit Phase 2. In einem Zahlenspiel kann der
+Spieler nicht unterscheiden, ob das Programm falsch rechnet oder er die Regel falsch
+verstanden hat — der Erklärer ist eine Vertrauensfrage.
 
-Ein Lernmodus, in dem der Computergegner seine Absicht offenlegt:
-
-> „Ich baue an einer geometrischen Harmonie in der linken Hälfte. Dein Stein 12 steht
-> mir im Weg."
+### 8.3 Der Gegner mit offenen Karten — Stufe 4
 
 `search.ts` gibt die Absicht als strukturiertes Ergebnis mit heraus; das Modell
-formuliert sie und entscheidet nichts. Damit wird der schwerste Teil des Spiels
-lernbar: die Absicht des Gegners lesen.
+formuliert sie und entscheidet nichts.
 
-### 7.3 Der Zwei-Stimmen-Coach
-
-Wahlweise **Mönch** oder **Analystin**. Gleicher Inhalt, zwei Rahmungen, jederzeit
-umschaltbar. Technisch eine Prompt-Variante, kein zweites System.
-
-> **Mönch:** „Du hast eine musikalische Proportion geschlossen. Boethius nannte sie so,
-> weil sie den Abstand selbst ins Verhältnis setzt."
->
-> **Analystin:** „Du hast eine harmonische Proportion geschlossen — dieselbe Beziehung
-> steckt im harmonischen Mittel, mit dem man Durchschnittsgeschwindigkeiten bildet und
-> Klassifikationsmodelle bewertet. Der F1-Score ist genau das."
-
-Die Zuordnung Harmonie → moderner Anwendungsfall gehört als Datentabelle nach
-`engine/rules/`, nicht in den Prompt. Sonst erfindet das Modell Anwendungsfälle.
+### 8.4 Der Regelchat — Stufe 5
 
 ---
 
-## 8. Zuständigkeitsgrenze der KI
+## 9. Zuständigkeitsgrenze der KI
 
 | Funktion | Zuständig |
 |---|---|
 | Zugvalidierung, Harmonieerkennung, Siegprüfung | Engine |
-| `verifyClaim` | Engine |
-| Grund für abgelehnten Schlag | Engine (`explain.ts`) |
-| Absicht des Gegners | Engine (`search.ts`) |
-| Gegnerstärke | Engine — Suchtiefe und Bewertungsrauschen |
 | Rätselerzeugung und -verifikation | Generator und Solver, deterministisch |
-| Deckungsgrad | Engine |
-| Übersetzung Spielertext → Behauptung | Sprachmodell, strukturierte Ausgabe |
-| Ausformulierung, Coach, Regelchat | Sprachmodell |
+| Rätselprüfung auf dem Server | Vergleich mit der gespeicherten Lösung, keine Engine im Server |
+| Deckungsgrad | Engine, beziehungsweise Trefferquote in Middles |
+| `verifyClaim`, Grund für abgelehnten Schlag, Absicht des Gegners | Engine |
+| Erzählerin, Coach, Regelchat, Übersetzung Spielertext → Behauptung | Sprachmodell |
 
 **Das Sprachmodell formuliert und übersetzt. Es entscheidet nie.** Jede Modellausgabe,
-die einen Zug oder eine Stellung benennt, wird vor der Anzeige gegen die Engine
-geprüft und bei Abweichung verworfen.
+die einen Zug, eine Zahl oder eine Stellung benennt, wird vor der Anzeige gegen die
+Engine geprüft und bei Abweichung verworfen.
 
-Die verwendete Regelfassung wird im Spiel sichtbar genannt, mit Quellenangabe, und
-ist später als Modus umschaltbar.
+Alle Modellaufrufe laufen über den API-Dienst (`api/`), nie aus der App. Der
+Schlüssel liegt nur auf Railway. Eine einzige Datei kapselt den Anbieter. Eigenes
+Kontingent pro Konto und Tag, Deckel, der still auf „heute nicht mehr verfügbar"
+schaltet. Fällt das Modell aus, bleibt das Spiel vollständig spielbar. Die KI-Schicht
+ist additiv, niemals tragend. Kennzeichnung nach AI Act Artikel 50 ab Stufe 3.
 
----
-
-## 9. Phasen
-
-| Phase | Inhalt |
-|---|---|
-| **1** | **Engine, ohne App.** Gerüst und Importtest; Brett, Steine, Zugerzeugung; die vier Schlagarten einzeln; `explain.ts`; `harmony.ts` doppelt plus Benchmark; `claims.ts`; `search.ts` mit Absicht; `solver.ts` |
-| **2** | Expo-App, Brett aus Views, Gegner lokal, Assistenzstufen, Deckungsgrad, Fehlschlag-Erklärer mit festem Text, Regelfassungs-Bildschirm. **Erster store-fähiger Stand, ohne Modellkosten** |
-| **3** | FastAPI, PostgreSQL, Konten, Deckungsgrad über Geräte, Tagesrätsel **Middles** mit nächtlichem Generator und Verteilungsanzeige nach dem Lösen |
-| **4** | Sprachmodell: Übersetzer, Begründungsmodus, Coach, Gegner mit offenen Karten, Regelchat. Ab hier Kennzeichnungspflicht nach AI Act Artikel 50 |
-| **5** | Abo, serverseitige Belegprüfung, 3,99–5,99 €/Monat. **Wolf-Ping vorher** |
-
-**Kosten:** Coach-Erklärungen sind über einen Stellungs-Hash cachebar, der
-Begründungsmodus **nicht** — jeder Spielersatz ist neu. Eigenes Kontingent, eigene
-Messung ab Tag eins, Deckel der still auf „heute nicht mehr verfügbar" schaltet.
-Fällt das Modell aus, bleibt das Spiel vollständig spielbar. Die KI-Schicht ist
-additiv, niemals tragend.
+Die verwendete Regelfassung wird im Spiel sichtbar genannt, mit Quellenangabe.
 
 ---
 
@@ -350,40 +349,42 @@ additiv, niemals tragend.
 - **Importprüfung** für `engine/`
 - **Doppelte Harmonieerkennung** — Mebben-Bedingungen gegen Mittelwertformeln
 - **Benchmark für `harmony.ts`**, Ergebnis im Repo
-- **Je Schlagart** positive und negative Fälle, inklusive Randfälle bei null Feldern
-  Abstand und nicht aufgehender Division
-- **`explain.ts`** — je Schlagart ein Fall, in dem die Begründung geprüft wird
-- **`verifyClaim`** — je Claim-Typ ein zutreffender und ein nicht zutreffender Fall,
-  plus ein Fall mit nicht existierendem Stein
-- **Regressionskorpus** fester Stellungen mit erwarteter Menge legaler Züge
-- **Modellausgaben** — gegen das Schema validiert, jede Stein-ID gegen die Stellung
-  geprüft, bevor sie die Engine erreicht
+- **Je Schlagart** positive und negative Fälle, inklusive Randfälle
+- **`explain.ts`**, **`verifyClaim`** — je Fall zutreffend und nicht zutreffend
+- **Regressionskorpus** fester Stellungen
+- **Generator:** dreißig Tage Rätsel, jedes eindeutig, der mittlere Stein zieht
+- **API:** pytest gegen ein echtes PostgreSQL
+- **Middles-Oberfläche:** Store-Logik als reine Funktionen getestet; Web-Build per
+  Chromium-Screenshot durchgespielt
+- **Modellausgaben** — gegen das Schema validiert, jede Zahl gegen das Rätsel
+  geprüft, bevor sie angezeigt wird
 
-Prüfliste vor jeder Auslieferung: Testlauf grün, Regressionskorpus unverändert, ein
-vollständiges Spiel von Hand durchgespielt, ein Tagesrätsel von Hand gelöst.
+Prüfliste vor jeder Auslieferung: Testlauf grün, Regressionskorpus unverändert,
+ein Tagesrätsel von Hand gelöst, der Dreiklang gehört.
 
 ---
 
 ## 11. Ablösbarkeit
 
-1. `engine/` bleibt frei von Framework-, Datenbank- und Anbieterabhängigkeiten,
-   überwacht durch den Importtest
-2. Alle Modellaufrufe über **eine einzige Datei** mit eigenen Schlüsseln aus
+1. `engine/` bleibt frei von Framework-, Datenbank- und Anbieterabhängigkeiten
+2. Alle Modellaufrufe über **eine einzige Datei** im API-Dienst, Schlüssel aus
    Umgebungsvariablen. Keine plattformverwalteten Sammel-Schlüssel.
-3. Eigene Datenbankinstanz, dokumentiertes Schema, Dump-Skript ab Tag eins
-4. `docker-compose.yml` und `.env.example` ab dem ersten Commit gepflegt
-5. Ablöse-Test alle vier Wochen: klonen, starten, ein Spiel durchspielen
+3. Eigene Datenbankinstanz, Schema als SQL im Repo, Dump-Skript
+4. `docker-compose.yml`, `.env.example`, `netlify.toml`, beide `Dockerfile`s im Repo
+5. Ablöse-Test alle vier Wochen: klonen, starten, ein Rätsel lösen
 
 ---
 
 ## 12. Betriebsmodus
 
-**Autonom:** Engine, Tests, Gerüst, Oberfläche, Infrastrukturdateien.
+**Autonom:** Engine, Tests, Gerüst, Oberfläche innerhalb der gewählten Gestaltung,
+Infrastrukturdateien.
 
-**Wolf-Ping:** Datenmodell-Schnitt; jede Abhängigkeit über Expo, React Native,
-Reanimated, Vitest, FastAPI, PostgreSQL hinaus; alles was die Ablösbarkeit berührt;
-jede Mehrdeutigkeit der Regelfassung; die Formulierungen der vier Felder aus
-Abschnitt 5; `harmony.ts` zu langsam; vor Phase 5.
+**Wolf-Ping:** die Gestaltungsrichtung (einmal); Datenmodell-Schnitt; jede
+Abhängigkeit über Expo, React Native, Reanimated, Vitest, FastAPI, psycopg,
+PostgreSQL hinaus; alles was Schlüssel oder Zugänge berührt; jede Mehrdeutigkeit
+der Regelfassung; die Formulierungen der vier Felder aus Abschnitt 6 und die
+Stimmen der Erzählerin; `harmony.ts` zu langsam; vor Stufe 6.
 
 Format: kurze klare Frage, zwei bis drei Varianten mit je einem Satz Konsequenz,
 dazu eine Empfehlung mit Begründung.
@@ -392,11 +393,28 @@ dazu eine Empfehlung mit Begründung.
 
 - Die Regelfassung ist mehrdeutig und du müsstest raten
 - Ein Testfall ist nicht erfüllbar, ohne die Regeln zu beugen
-- Die beiden Harmonieerkennungen widersprechen sich und der Grund ist nicht auffindbar
+- Die beiden Harmonieerkennungen widersprechen sich
 - Der Solver findet für erzeugte Rätsel systematisch mehrere Lösungen
+- Ein Bildschirm braucht eine Anleitung
 - **Eine Festlegung dieser Datei stellt sich als falsch heraus**
 
-Der letzte Punkt ist ausdrücklich erwünscht.
+Der letzte Punkt ist ausdrücklich erwünscht — er hat zu dieser zweiten Fassung geführt.
 
 **Arbeitsweise:** Ein Fix pro Commit. Diagnose vor Änderung. Nie auf `main`
 committen — immer Branch, dann Pull Request. Tagesreport statt Zwischenmeldungen.
+
+---
+
+## 13. Was sich gegenüber der ersten Fassung geändert hat
+
+- Middles war Phase 3, das Vollspiel Phase 2. Jetzt ist Middles Stufe 1 und das
+  Produkt; das Brett kommt klein in Stufe 4 und voll in Stufe 5.
+- Die Erzählerin ist neu und die erste KI-Funktion. Regelchat, Begründungsmodus und
+  offene Karten rücken hinter das Brett, weil sie ein Brett voraussetzen.
+- Klang ist Teil des Produkts.
+- Ein Abschnitt Gestaltung ist neu; die Richtung ist ein Wolf-Ping.
+- Die Deckung bekommt eine Middles-Form (Trefferquote je Mittelart), die Brettform
+  bleibt.
+- Der Stack nennt `expo-audio` und die Deploy-Dateien, die inzwischen existieren.
+- Unverändert: Regelfassung, Engine, API, Generator, Zuständigkeitsgrenze der KI,
+  Ablösbarkeit.
