@@ -63,7 +63,7 @@ Rechenlast.
 | **0** | Engine, API, Konten, Generator, Deploy-Kette | fertig, bleibt unverändert |
 | **1** | **Middles ohne Brett.** Ein Rätsel am Tag, drei Versuche, teilbares Ergebnis, Dreiklang zum Anhören, ein Satz dazu, wo dieses Mittel heute in der Welt steckt (fester Text) | gebaut |
 | **2** | Progression: erst arithmetisch, dann geometrisch, dann musikalisch, dann gemischt („welches Mittel?"), dann vier Zahlen mit zwei Mitteln. Deckung je Mittelart über Wochen | **jetzt**, auf dem Gerät gebaut |
-| **3** | Die Erzählerin: der Satz nach dem Lösen kommt vom Sprachmodell, in zwei Stimmen, cachebar pro Rätsel. Erste KI-Funktion, AI-Act-Kennzeichnung | danach |
+| **3** | Die Erzählerin: nach dem Lösen zwei Stimmen (Mönch, Analystin) und „Wer lügt?“ mit drei Erklärungen, eine stimmt. Der Generator liefert Wahrheit und Lügen als Fakten, das Modell formuliert, der Server prüft jede Zahl. Cachebar pro Rätsel, Tageslimit, AI-Act-Kennzeichnung | gebaut, Schlüssel auf Railway offen |
 | **4** | Das kleine Brett: 4 × 8, acht Steine, eine Schlagart, Sieg = eine Harmonie legen. Begründungsmodus, Gegner mit offenen Karten | wer Stufe 2 durchhat |
 | **5** | Das volle Brett nach Mebben, Regelchat, Deckung auf dem Brett | für die, die es wollen |
 | **6** | Abo, serverseitige Belegprüfung. **Wolf-Ping vorher** | zuletzt |
