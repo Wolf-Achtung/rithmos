@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { feedbackFor, isFinished, previousDay, recordAnswer, shareText, streakOn } from './logic';
+import { feedbackFor, isFinished, previousDay, recordAnswer, shareText, streakOn, gapLine, patternExample } from './logic';
 import type { DayResult } from './logic';
 
 describe('feedback for an offer', () => {
@@ -50,5 +50,24 @@ describe('share text', () => {
     expect(shareText('2026-10-17', { solved: true, answers: [9, 8] })).toBe('Middles Nº 47 · 2/3\n■■□');
     expect(shareText('2026-09-01', { solved: true, answers: [8] })).toBe('Middles Nº 1 · 1/3\n■□□');
     expect(shareText('2026-09-01', { solved: false, answers: [1, 2, 3] })).toBe('Middles Nº 1 · X/3\n■■■');
+  });
+});
+
+describe('the feedback that teaches the rule', () => {
+  it('names the steps, the factors, or the steps against the outer numbers', () => {
+    expect(gapLine('arithmetic', 5, 8, 20)).toEqual({ left: '+3', right: '+12', match: false });
+    expect(gapLine('arithmetic', 2, 4, 6)).toEqual({ left: '+2', right: '+2', match: true });
+    expect(gapLine('geometric', 5, 10, 20)).toEqual({ left: '×2', right: '×2', match: true });
+    expect(gapLine('geometric', 5, 8, 20)).toEqual({ left: '×1,6', right: '×2,5', match: false });
+    expect(gapLine('musical', 6, 8, 12)).toEqual({ left: 'Schritte 1 : 2', right: 'außen 1 : 2', match: true });
+    expect(gapLine('musical', 6, 9, 12)).toEqual({ left: 'Schritte 1 : 1', right: 'außen 1 : 2', match: false });
+    expect(gapLine('arithmetic', 6, 8.7, 12).left).toBe('+2,7');
+  });
+
+  it('picks an example of the pattern that is not the puzzle itself', () => {
+    expect(patternExample('arithmetic', 5, 20)).toEqual([2, 4, 6]);
+    expect(patternExample('arithmetic', 2, 6)).toEqual([3, 5, 7]);
+    expect(patternExample('musical', 6, 12)).toEqual([3, 4, 6]);
+    expect(patternExample('geometric', 2, 8)).toEqual([3, 6, 12]);
   });
 });
