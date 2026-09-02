@@ -63,6 +63,11 @@ def test_check_accepts_the_facts_and_rejects_invented_numbers():
         }
     )
     assert check(plain, FACTS) == []
+    # the prompt's own example must pass the check it is checked by
+    from rithmos_api.llm import SYSTEM
+
+    example = " ".join(SYSTEM.split("Muster: „")[1].split("“")[0].split())
+    assert check(GOOD.model_copy(update={"truth": example}), FACTS) == []
 
 
 def test_narrate_retries_once_then_gives_up():
@@ -118,3 +123,20 @@ def test_narration_falls_silent_without_provider_facts_or_budget(client):
     )
     assert client.get(f"/v1/puzzles/{TODAY}/narration", headers=a).status_code == 404
     assert app.state.llm.calls == 0
+
+
+def test_narration_gives_up_after_repeated_failures(client):
+    from rithmos_api.routers import narration as mod
+
+    app = client.app
+    bad = GOOD.model_copy(update={"monk": "Die 5 fehlt hier."})
+    app.state.llm = FakeProvider([bad] * 20)
+    _ingest(client)
+    a = auth(client)
+    client.post(f"/v1/puzzles/{TODAY}/attempts", json={"answer": 8, "tries": 1, "seconds": 5}, headers=a)
+    mod._failures.clear()
+    for _ in range(mod.GIVE_UP_AFTER + 2):
+        assert client.get(f"/v1/puzzles/{TODAY}/narration", headers=a).status_code == 404
+    # two calls per failed narration, and none once the server has given up
+    assert app.state.llm.calls == 2 * mod.GIVE_UP_AFTER
+    mod._failures.clear()

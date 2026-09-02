@@ -118,7 +118,7 @@ export const texts = {
   triadShare: 'Teilen',
   // "Erklär es mir": the four fields of CLAUDE.md 6 on the daily puzzle (wording provisional, Wolf-Ping)
   explainTitle: 'Warum?',
-  explainPlaceholder: 'Warum gehört diese Zahl in die Mitte?',
+  explainPlaceholder: (b: number) => `In einem Satz: Warum gehört ${b} in die Mitte?`,
   explainSend: 'Prüfen',
   explainSpent: 'Heute schon erklärt.',
   explainOff: 'Heute nicht verfügbar.',

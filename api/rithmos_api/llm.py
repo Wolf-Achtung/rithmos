@@ -44,10 +44,13 @@ Vier Texte:
 - analyst: eine Datenanalystin heute. Ein Satz, höchstens 140 Zeichen, mit einem Beispiel aus dem Alltag, in
   dem genau dieses Muster steckt (Durchschnitt, Wachstum, hin und zurück fahren, F1-Score, Blenden), mit den
   Zahlen des Rätsels.
-- truth: ein Satz, höchstens 120 Zeichen, warum b in die Mitte gehört, mit den Schritten oder Faktoren als
-  Zahlen. Muster: „8 gehört in die Mitte, weil sich die Schritte 2 und 4 verhalten wie 6 und 12.“
-- lies: zwei Sätze im selben Bau wie truth, die die angegebenen falschen Behauptungen aufstellen, jede mit
-  einer Begründung, die plausibel klingt und beim Nachrechnen nicht stimmt. Kein Hinweis, dass sie falsch sind."""
+- truth: ein Satz, höchstens 120 Zeichen, warum b in die Mitte gehört: die Zahl, das Muster in seinen
+  Worten (gleiche Schritte / gleiche Faktoren / die Schritte verhalten sich wie die Außenzahlen) und die
+  Schritte oder Faktoren als Zahlen. Muster: „8 gehört in die Mitte, weil sich die Schritte 2 und 4 verhalten
+  wie die Außenzahlen 6 und 12.“
+- lies: zwei Sätze im selben Bau wie truth, mit der angegebenen Zahl und dem angegebenen Muster in seinen
+  Worten, jede mit einer Begründung, die plausibel klingt und beim Nachrechnen nicht stimmt. Kein Hinweis,
+  dass sie falsch sind."""
 
 
 class Narration(BaseModel):
@@ -141,9 +144,18 @@ def check(n: Narration, f: Facts) -> list[str]:
 
 # words that name a kind in plain language, any of which counts; the classical names count too
 KIND_WORDS = {
-    "arithmetic": ("gleiche schritte", "gleichen schritten", "gleich groß", "arithmet"),
-    "geometric": ("faktor", "geometr"),
-    "musical": ("außenzahl", "harmon", "musikal"),
+    "arithmetic": (
+        "gleiche schritte",
+        "gleichen schritten",
+        "gleich groß",
+        "gleich sind",
+        "gleich weit",
+        "derselbe schritt",
+        "arithmet",
+        "durchschnitt",
+    ),
+    "geometric": ("faktor", "geometr", "verdoppel", "mal so"),
+    "musical": ("außenzahl", "verhalten sich", "verhält sich", "verhältnis", "harmon", "musikal", "saite"),
 }
 
 
