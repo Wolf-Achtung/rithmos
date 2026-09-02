@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .db import make_pool
-from .routers import accounts, coverage, health, puzzles
+from .routers import accounts, coverage, health, middles, puzzles
 from .settings import Settings
 
 
@@ -36,6 +36,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(accounts.router)
     app.include_router(coverage.router)
     app.include_router(puzzles.router)
+    app.include_router(middles.router)
     return app
 
 
