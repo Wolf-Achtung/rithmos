@@ -93,6 +93,12 @@ Stufe 4 sie in vereinfachter Form zurückholt.
   Brettform desselben Tages bleibt im Datensatz für Stufe 4.
 - Der Dreiklang klingt in den Verhältnissen der drei Zahlen selbst, a : b : c über
   einem freien Grundton. Durch c ≤ 4·a bleibt er innerhalb von zwei Oktaven.
+- **Stimmen statt Tippen.** Wo ein Dauerton möglich ist (Web Audio) und der Klang an
+  ist, gibt es keine Angebote: Der Spieler zieht den fehlenden Ton zwischen die
+  beiden gegebenen, ganzzahlige Mittel rasten ein, Loslassen ist die Antwort
+  (± 25 Cent). Die Abweichung in Cent wird mit dem Ergebnis gespeichert. Stumm oder
+  ohne Dauerton bleiben die vier Angebote. Auf iOS und Android braucht der Dauerton
+  eine weitere Abhängigkeit (`react-native-audio-api`) — Wolf-Ping, bis dahin Angebote.
 
 ### Üben, Stufe 2, genau
 
