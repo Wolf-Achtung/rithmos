@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { centsBetween, judgeRelease, positionOf, snapNear, valueAt } from './tuning';
+import { centsBetween, judgeRelease, positionOf, snapNear, valueAt, judgeLength } from './tuning';
 
 describe('tuning by ear', () => {
   it('runs the slider evenly in pitch between a and c', () => {
@@ -29,5 +29,15 @@ describe('tuning by ear', () => {
     const off = judgeRelease(10.4, 8, 'musical', 6, 12);
     expect(off).toMatchObject({ kind: 'off', nearest: 10 });
     expect(off.cents).toBeGreaterThan(400);
+  });
+});
+
+describe('judging a length by eye', () => {
+  it('accepts six percent, names the other mean, or says how far off', () => {
+    expect(judgeLength(8.3, 8, 'musical', 6, 12).kind).toBe('right');
+    expect(judgeLength(9.2, 8, 'musical', 6, 12)).toMatchObject({ kind: 'otherMean', mean: 'arithmetic', value: 9 });
+    const off = judgeLength(11, 8, 'musical', 6, 12);
+    expect(off.kind).toBe('off');
+    expect(off.off).toBeCloseTo(0.375);
   });
 });

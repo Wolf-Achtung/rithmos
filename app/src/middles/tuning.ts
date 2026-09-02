@@ -62,3 +62,23 @@ export function judgeRelease(value: number, target: number, kind: HarmonyKind, a
   }
   return { kind: 'off', cents, nearest: Math.round(value) };
 }
+
+/** How far off a length may be and still count, as a share of the target (6 %). */
+export const LENGTH_TOLERANCE = 0.06;
+
+export type LengthRelease =
+  | { readonly kind: 'right'; readonly off: number }
+  | { readonly kind: 'otherMean'; readonly mean: HarmonyKind; readonly value: number; readonly off: number }
+  | { readonly kind: 'off'; readonly off: number; readonly nearest: number };
+
+/** What letting go of the middle bar at a length means; `off` is the relative deviation from the target. */
+export function judgeLength(value: number, target: number, kind: HarmonyKind, a: number, c: number, tolerance = LENGTH_TOLERANCE): LengthRelease {
+  const off = (value - target) / target;
+  if (Math.abs(off) <= tolerance) return { kind: 'right', off };
+  for (const other of HARMONY_KINDS) {
+    if (other === kind) continue;
+    const m = meanOf(other, a, c);
+    if (m !== null && Math.abs((value - m) / m) <= tolerance) return { kind: 'otherMean', mean: other, value: m, off };
+  }
+  return { kind: 'off', off, nearest: Math.round(value) };
+}
