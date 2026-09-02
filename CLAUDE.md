@@ -87,6 +87,12 @@ Stufe 4 sie in vereinfachter Form zurückholt.
 - Die vier Angebote enthalten immer die beiden anderen Mittel als Ablenker,
   wenn sie ganzzahlig sind. Wer 9 statt 8 tippt, hat arithmetisch gedacht — das
   ist die Rückmeldung wert.
+- Die Zahlen kommen nicht aus den Steinen der Regelfassung, sondern aus allen
+  ganzzahligen Tripeln bis 64 mit c höchstens 4·a. Grund: die Steine Mebbens
+  ergeben nur zwei musikalische Tripel für Weiß und keins für Schwarz. Die
+  Brettform desselben Tages bleibt im Datensatz für Stufe 4.
+- Der Dreiklang klingt in den Verhältnissen der drei Zahlen selbst, a : b : c über
+  einem freien Grundton. Durch c ≤ 4·a bleibt er innerhalb von zwei Oktaven.
 
 ### Gestaltung
 
