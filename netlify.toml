@@ -1,0 +1,27 @@
+# Web build for Netlify. Kept in the repository so the build chain is
+# reproducible instead of living only in the Netlify UI (CLAUDE.md section 11).
+#
+# This file takes precedence over the build settings configured in the UI.
+#
+# EXPO_PUBLIC_API_URL is deliberately NOT set here: it is compiled into the
+# bundle at build time, and a deploy preview should be able to point somewhere
+# else than production. Set it per context under
+# Site configuration -> Environment variables:
+#
+#   EXPO_PUBLIC_API_URL = https://<the API service on Railway>
+#
+# Without it the app runs fully offline: local opponent, local coverage trend,
+# a locally generated Middles puzzle.
+
+[build]
+  command = "npm run app:export"
+  publish = "app/dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# The app is a single page; every path serves the same document.
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
