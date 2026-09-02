@@ -15,12 +15,14 @@ import type { Palette } from '../theme';
 interface Props {
   readonly session: Session;
   readonly date: string;
+  /** the day's middle, so the question names it */
+  readonly b: number;
   readonly palette: Palette;
 }
 
 type State = { kind: 'idle' } | { kind: 'busy' } | { kind: 'done'; result: ExplainResult } | { kind: 'spent' } | { kind: 'off' } | { kind: 'error' };
 
-export function ExplainAsk({ session, date, palette }: Props) {
+export function ExplainAsk({ session, date, b, palette }: Props) {
   const styles = useMemo(() => makeStyles(palette), [palette]);
   const [text, setText] = useState('');
   const [state, setState] = useState<State>({ kind: 'idle' });
@@ -60,7 +62,7 @@ export function ExplainAsk({ session, date, palette }: Props) {
         <TextInput
           value={text}
           onChangeText={setText}
-          placeholder={texts.explainPlaceholder}
+          placeholder={texts.explainPlaceholder(b)}
           placeholderTextColor={palette.muted}
           style={styles.input}
           returnKeyType="send"
