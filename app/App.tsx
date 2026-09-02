@@ -7,8 +7,11 @@ import type { ReactNode } from 'react';
 import { Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { mebben } from '../engine/rules/mebben';
 import type { Session } from './src/api/client';
+import type { SkillRecord } from './src/middles/skill';
 import { MiddlesScreen } from './src/screens/MiddlesScreen';
+import { PracticeScreen } from './src/screens/PracticeScreen';
 import { RulesScreen } from './src/screens/RulesScreen';
+import { SkillScreen } from './src/screens/SkillScreen';
 import { store } from './src/storage';
 import { ensureSession } from './src/sync';
 import { texts } from './src/texts';
@@ -16,6 +19,9 @@ import { fonts, palettes, radius, spacing, type } from './src/theme';
 import type { Palette, ThemeName } from './src/theme';
 
 const SETTINGS_KEY = 'middles:settings';
+const SKILL_KEY = 'middles:skill';
+
+type Tab = 'today' | 'practice' | 'skill';
 
 interface Settings {
   readonly sound: boolean;
@@ -41,13 +47,16 @@ export default function App() {
   const [settingsReady, setSettingsReady] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
   const [sheet, setSheet] = useState<'none' | 'settings' | 'rules'>('none');
+  const [tab, setTab] = useState<Tab>('today');
+  const [skill, setSkill] = useState<SkillRecord[]>([]);
 
   useEffect(() => {
     let alive = true;
     (async () => {
-      const stored = await store.read<Partial<Settings>>(SETTINGS_KEY, {});
+      const [stored, records] = await Promise.all([store.read<Partial<Settings>>(SETTINGS_KEY, {}), store.read<SkillRecord[]>(SKILL_KEY, [])]);
       if (!alive) return;
       setSettings({ ...defaultSettings, ...stored });
+      setSkill(records);
       setSettingsReady(true);
       const s = await ensureSession();
       if (alive) setSession(s);
@@ -69,11 +78,37 @@ export default function App() {
     });
   }
 
+  /** One record per puzzle: a repeated settlement of the same day or round changes nothing. */
+  function onSkill(record: SkillRecord) {
+    setSkill((prev) => {
+      if (prev.some((r) => r.id === record.id)) return prev;
+      const next = [...prev, record];
+      void store.write(SKILL_KEY, next);
+      return next;
+    });
+  }
+
   if ((!fontsLoaded && !fontError) || !settingsReady) return <View style={styles.root} />;
 
   return (
     <SafeAreaView style={styles.root}>
-      <MiddlesScreen session={session} palette={palette} soundOn={settings.sound} onOpenSettings={() => setSheet('settings')} />
+      {tab === 'today' ? <MiddlesScreen session={session} palette={palette} soundOn={settings.sound} onOpenSettings={() => setSheet('settings')} onSkill={onSkill} /> : null}
+      {tab === 'practice' ? <PracticeScreen palette={palette} soundOn={settings.sound} records={skill} onSkill={onSkill} /> : null}
+      {tab === 'skill' ? <SkillScreen palette={palette} records={skill} /> : null}
+
+      <View style={styles.tabs}>
+        {(
+          [
+            ['today', texts.tabToday],
+            ['practice', texts.tabPractice],
+            ['skill', texts.tabSkill],
+          ] as const
+        ).map(([key, label]) => (
+          <Pressable key={key} onPress={() => setTab(key)} style={styles.tab} testID={`tab-${key}`}>
+            <Text style={[styles.tabLabel, tab === key && styles.tabActive]}>{label}</Text>
+          </Pressable>
+        ))}
+      </View>
 
       <Modal visible={sheet !== 'none'} transparent animationType="fade" onRequestClose={() => setSheet('none')}>
         <Pressable style={styles.scrim} onPress={() => setSheet('none')} testID="settings-scrim" />
@@ -163,6 +198,10 @@ function Toggle<T extends string | boolean>({ options, value, onChange, styles, 
 function makeStyles(p: Palette) {
   return StyleSheet.create({
     root: { flex: 1, backgroundColor: p.background },
+    tabs: { flexDirection: 'row', justifyContent: 'center', gap: spacing.xl, paddingVertical: spacing.md, borderTopWidth: 1, borderTopColor: p.border },
+    tab: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
+    tabLabel: { fontFamily: fonts.textMedium, fontSize: type.small.fontSize, color: p.muted, letterSpacing: 0.4 },
+    tabActive: { color: p.accent },
     scrim: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.55)' },
     sheet: { position: 'absolute', left: 0, right: 0, bottom: 0, maxHeight: '85%', width: '100%', maxWidth: 520, alignSelf: 'center', backgroundColor: p.surface, borderTopLeftRadius: radius.card, borderTopRightRadius: radius.card, borderWidth: 1, borderColor: p.border, padding: spacing.lg, gap: spacing.md },
     sheetTitle: { fontFamily: fonts.numeralBold, fontSize: type.title.fontSize, color: p.ink },
