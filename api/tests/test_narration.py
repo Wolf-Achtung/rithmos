@@ -52,7 +52,17 @@ def test_check_accepts_the_facts_and_rejects_invented_numbers():
     assert any(p.startswith("truth") for p in check(wrong_truth, FACTS))
     swapped_lie = GOOD.model_copy(update={"lies": [GOOD.lies[1], GOOD.lies[0]]})
     assert any(p.startswith("lie") for p in check(swapped_lie, FACTS))
-    assert "Fundstück" not in facts_json(FACTS) and '"mittelart_von_b": "musikalisch"' in facts_json(FACTS)
+    assert "Fundstück" not in facts_json(FACTS) and '"name_des_musters": "musikalisch"' in facts_json(FACTS)
+    plain = GOOD.model_copy(
+        update={
+            "truth": "8 gehört in die Mitte, weil sich die Schritte 2 und 4 verhalten wie die Außenzahlen 6 und 12.",
+            "lies": [
+                "9 gehört in die Mitte, weil sich die Schritte 3 und 3 verhalten wie die Außenzahlen.",
+                "8 gehört in die Mitte, weil beide Schritte gleiche Schritte sind: 2 und 4.",
+            ],
+        }
+    )
+    assert check(plain, FACTS) == []
 
 
 def test_narrate_retries_once_then_gives_up():
