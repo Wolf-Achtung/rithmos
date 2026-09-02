@@ -179,3 +179,75 @@ def narrate(provider: Provider, f: Facts, attempts: int = 2) -> Narration:
         if not last:
             return n
     raise ValueError("narration failed the facts check: " + "; ".join(last))
+
+
+# ---------------------------------------------------------------------------
+# The hunt (Zug F): the model counts what it sees; the engine, in the app,
+# decides whether the counts form a harmony. The model never names a harmony.
+
+HUNT_SYSTEM = """Du siehst ein Foto aus dem Alltag. Zähle, was sich darauf in Gruppen zählen lässt: gleichartige Dinge
+(Bücher in einem Regal, Fenster einer Fassade, Stufen, Tassen, Fliesen in einer Reihe, Zähne eines Zahnrads,
+Tasten, Stühle). Gib bis zu acht Gruppen zurück, jede mit einem kurzen deutschen Namen (Plural, ein bis drei
+Wörter) und der Anzahl, die du wirklich abzählen kannst. Zähle nur, was sicher zählbar ist; schätze nicht.
+Keine Gruppe mit weniger als 2 oder mehr als 200. Keine Deutung, keine Mathematik — nur Namen und Zahlen."""
+
+
+class HuntGroup(BaseModel):
+    label: str = Field(max_length=60)
+    count: int = Field(ge=2, le=200)
+
+
+class HuntCounts(BaseModel):
+    groups: list[HuntGroup] = Field(max_length=8)
+
+
+class VisionProvider(Protocol):
+    def count(self, system: str, image_media_type: str, image_base64: str) -> HuntCounts: ...
+
+
+@dataclass
+class AnthropicVision:
+    model: str = MODEL
+
+    def count(self, system: str, image_media_type: str, image_base64: str) -> HuntCounts:
+        import anthropic
+
+        client = anthropic.Anthropic()
+        response = client.messages.parse(
+            model=self.model,
+            max_tokens=1500,
+            system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "image",
+                            "source": {"type": "base64", "media_type": image_media_type, "data": image_base64},
+                        },
+                        {"type": "text", "text": "Was lässt sich hier zählen?"},
+                    ],
+                }
+            ],
+            output_format=HuntCounts,
+        )
+        if response.stop_reason == "refusal" or response.parsed_output is None:
+            raise RuntimeError(f"no counts: stop_reason={response.stop_reason}")
+        return response.parsed_output
+
+
+def vision_from_env() -> VisionProvider | None:
+    return AnthropicVision() if os.environ.get("ANTHROPIC_API_KEY") else None
+
+
+def clean_counts(counts: HuntCounts) -> HuntCounts:
+    """Distinct labels, distinct counts kept in first-seen order, at most eight."""
+    seen_labels: set[str] = set()
+    groups: list[HuntGroup] = []
+    for g in counts.groups:
+        label = g.label.strip()
+        if not label or label.lower() in seen_labels:
+            continue
+        seen_labels.add(label.lower())
+        groups.append(HuntGroup(label=label, count=g.count))
+    return HuntCounts(groups=groups[:8])
