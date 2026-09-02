@@ -98,6 +98,9 @@ export function MiddlesScreen({ session, palette, soundOn, onOpenSettings, onSki
   const [typed, setTyped] = useState('');
   const started = useRef(Date.now());
   const submitted = useRef(false);
+  // true only when the day was finished in this session: the chord, the record and the
+  // attempt belong to that moment, not to every later reload of a finished day
+  const settledHere = useRef(false);
   const swing = useSharedValue(0);
 
   useEffect(() => {
@@ -119,21 +122,29 @@ export function MiddlesScreen({ session, palette, soundOn, onOpenSettings, onSki
   const lastAnswer = today?.answers[today.answers.length - 1];
   const feedback = loaded && lastAnswer !== undefined ? feedbackFor(loaded.triad, lastAnswer) : null;
 
-  // the settlement of a finished day: sound, swing, the record, the attempt on the server
+  // the settlement of a finished day: sound, swing, the record, the attempt on the server;
+  // a day finished earlier only fetches what the server already has
   useEffect(() => {
     if (!loaded || !finished || !today || submitted.current) return;
     submitted.current = true;
-    if (today.solved) {
+    const fresh = settledHere.current;
+    if (fresh && today.solved) {
       swing.value = withSequence(withTiming(1, { duration: 1800, easing: Easing.linear }), withTiming(0, { duration: 0 }));
       if (soundOn) void playChord(chordFrequencies([loaded.triad.a, loaded.b, loaded.triad.c])).catch(() => undefined);
     }
-    onSkill({ id: `daily:${loaded.date}`, t: Date.now(), mode: 'daily', level: 0, kind: loaded.triad.kind, solved: today.solved, tries: triesOf(today), ...(today.cents === undefined ? {} : { cents: today.cents }) });
+    if (fresh) onSkill({ id: `daily:${loaded.date}`, t: Date.now(), mode: 'daily', level: 0, kind: loaded.triad.kind, solved: today.solved, tries: triesOf(today), ...(today.cents === undefined ? {} : { cents: today.cents }), ...(loaded.triad.find ? { find: loaded.triad.find.id } : {}) });
     if (loaded.source === 'api' && session && lastAnswer !== undefined) {
-      const seconds = Math.round((Date.now() - started.current) / 1000);
-      submitAttempt(session, loaded.date, { answer: lastAnswer, tries: triesOf(today) }, seconds)
-        .then((r) => setDistribution(r.distribution))
-        .catch(() => fetchDistribution(loaded.date).then(setDistribution).catch(() => undefined))
-        .finally(() => fetchNarration(session, loaded.date).then(setNarration).catch(() => undefined));
+      const after = () => fetchNarration(session, loaded.date).then(setNarration).catch(() => undefined);
+      if (fresh) {
+        const seconds = Math.round((Date.now() - started.current) / 1000);
+        submitAttempt(session, loaded.date, { answer: lastAnswer, tries: triesOf(today) }, seconds)
+          .then((r) => setDistribution(r.distribution))
+          .catch(() => fetchDistribution(loaded.date).then(setDistribution).catch(() => undefined))
+          .finally(after);
+      } else {
+        fetchDistribution(loaded.date).then(setDistribution).catch(() => undefined);
+        void after();
+      }
     }
     return () => cancelAnimation(swing);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -143,6 +154,7 @@ export function MiddlesScreen({ session, palette, soundOn, onOpenSettings, onSki
     if (!loaded || finished) return;
     const solved = feedbackFor(loaded.triad, answer).kind === 'right';
     const next = recordAnswer(results, loaded.date, answer, solved, undefined, loaded.triad.find?.id);
+    settledHere.current = true;
     setResults(next);
     setTyped('');
     void store.write(RESULTS_KEY, next);
@@ -160,6 +172,7 @@ export function MiddlesScreen({ session, palette, soundOn, onOpenSettings, onSki
     const verdict = judgeRelease(value, b, triad.kind, triad.a, triad.c);
     const answer = verdict.kind === 'right' ? b : verdict.kind === 'otherMean' ? verdict.value : Math.round(value * 10) / 10;
     const next = recordAnswer(results, loaded.date, answer, verdict.kind === 'right', verdict.cents, triad.find?.id);
+    settledHere.current = true;
     setResults(next);
     void store.write(RESULTS_KEY, next);
   }
@@ -278,7 +291,7 @@ export function MiddlesScreen({ session, palette, soundOn, onOpenSettings, onSki
             </Text>
           ) : null}
           {loaded.source === 'local' ? <Text style={styles.small}>{texts.triadOffline}</Text> : null}
-          {loaded.source === 'api' && session ? <ExplainAsk session={session} date={loaded.date} palette={palette} /> : null}
+          {loaded.source === 'api' && session ? <ExplainAsk session={session} date={loaded.date} b={b} palette={palette} /> : null}
           {narration ? (
             <View style={styles.voices} testID="middles-narration">
               <Text style={styles.voice}>
