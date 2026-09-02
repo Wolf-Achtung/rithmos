@@ -13,6 +13,7 @@ import { MiddlesScreen } from './src/screens/MiddlesScreen';
 import { ChainScreen } from './src/screens/ChainScreen';
 import { HuntScreen } from './src/screens/HuntScreen';
 import { PracticeScreen } from './src/screens/PracticeScreen';
+import { RulesAsk } from './src/screens/RulesAsk';
 import { RulesScreen } from './src/screens/RulesScreen';
 import { SkillScreen } from './src/screens/SkillScreen';
 import { SmallBoardScreen } from './src/screens/SmallBoardScreen';
@@ -249,6 +250,7 @@ export default function App() {
           ) : (
             <>
               <ScrollView style={styles.rules}>
+                <RulesAsk session={session} palette={palette} />
                 <RulesScreen />
               </ScrollView>
               <View style={styles.sheetActions}>
