@@ -13,19 +13,23 @@ import { MiddlesScreen } from './src/screens/MiddlesScreen';
 import { ChainScreen } from './src/screens/ChainScreen';
 import { HuntScreen } from './src/screens/HuntScreen';
 import { PracticeScreen } from './src/screens/PracticeScreen';
+import { RulesAsk } from './src/screens/RulesAsk';
 import { RulesScreen } from './src/screens/RulesScreen';
 import { SkillScreen } from './src/screens/SkillScreen';
 import { SmallBoardScreen } from './src/screens/SmallBoardScreen';
 import { unlockedLevel } from '../jobs/src/practice';
 import { solvedAtLevel } from './src/middles/skill';
 import { store } from './src/storage';
-import { ensureSession, syncSkill } from './src/sync';
+import { ensureSession, syncCoverage, syncSkill } from './src/sync';
+import { mergeRecords, newRecordId } from './src/coverage';
+import type { CoverageRecord } from './src/coverage';
 import { texts } from './src/texts';
 import { fonts, palettes, radius, spacing, type } from './src/theme';
 import type { Palette, ThemeName } from './src/theme';
 
 const SETTINGS_KEY = 'middles:settings';
 const SKILL_KEY = 'middles:skill';
+const COVERAGE_KEY = 'coverage';
 
 type Tab = 'today' | 'chain' | 'practice' | 'board' | 'skill';
 
@@ -55,14 +59,17 @@ export default function App() {
   const [sheet, setSheet] = useState<'none' | 'settings' | 'rules' | 'hunt'>('none');
   const [tab, setTab] = useState<Tab>('today');
   const [skill, setSkill] = useState<SkillRecord[]>([]);
+  const [coverage, setCoverage] = useState<CoverageRecord[]>([]);
+  const [board, setBoard] = useState<'choose' | 'small' | 'full'>('choose');
 
   useEffect(() => {
     let alive = true;
     (async () => {
-      const [stored, records] = await Promise.all([store.read<Partial<Settings>>(SETTINGS_KEY, {}), store.read<SkillRecord[]>(SKILL_KEY, [])]);
+      const [stored, records, marks] = await Promise.all([store.read<Partial<Settings>>(SETTINGS_KEY, {}), store.read<SkillRecord[]>(SKILL_KEY, []), store.read<CoverageRecord[]>(COVERAGE_KEY, [])]);
       if (!alive) return;
       setSettings({ ...defaultSettings, ...stored });
       setSkill(records);
+      setCoverage(marks);
       setSettingsReady(true);
       const s = await ensureSession();
       if (!alive) return;
@@ -72,6 +79,13 @@ export default function App() {
           const merged = await syncSkill(s, records);
           if (alive) setSkill((prev) => mergeSkill(prev, merged));
           void store.write(SKILL_KEY, merged);
+        } catch {
+          // offline: the device copy stands
+        }
+        try {
+          const mergedMarks = await syncCoverage(s, marks);
+          if (alive) setCoverage((prev) => mergeRecords(prev, mergedMarks));
+          void store.write(COVERAGE_KEY, mergedMarks);
         } catch {
           // offline: the device copy stands
         }
@@ -118,6 +132,16 @@ export default function App() {
     });
   }
 
+  /** A scored marking on the board: one coverage record, synced when the server is there. */
+  function onCoverage(value: number) {
+    setCoverage((prev) => {
+      const next = [...prev, { id: newRecordId(), t: Date.now(), coverage: value, assist: 0 }];
+      void store.write(COVERAGE_KEY, next);
+      if (session) void syncCoverage(session, next).then((merged) => { setCoverage((p) => mergeRecords(p, merged)); void store.write(COVERAGE_KEY, merged); }).catch(() => undefined);
+      return next;
+    });
+  }
+
   if ((!fontsLoaded && !fontError) || !settingsReady) return <View style={styles.root} />;
 
   return (
@@ -127,14 +151,30 @@ export default function App() {
       {tab === 'practice' ? <PracticeScreen palette={palette} soundOn={settings.sound} records={skill} onSkill={onSkill} /> : null}
       {tab === 'board' ? (
         unlockedLevel((l) => solvedAtLevel(skill, l)) >= 5 ? (
-          <SmallBoardScreen palette={palette} />
+          board === 'choose' ? (
+            <View style={styles.choose} testID="board-choose">
+              <Text style={styles.sheetTitle}>{texts.boardChoose}</Text>
+              <Pressable onPress={() => setBoard('small')} style={styles.choice} testID="choose-small">
+                <Text style={styles.choiceTitle}>{texts.board}</Text>
+                <Text style={styles.note}>{texts.boardSmallNote}</Text>
+              </Pressable>
+              <Pressable onPress={() => setBoard('full')} style={styles.choice} testID="choose-full">
+                <Text style={styles.choiceTitle}>{texts.boardFull}</Text>
+                <Text style={styles.note}>{texts.boardFullNote}</Text>
+              </Pressable>
+            </View>
+          ) : board === 'small' ? (
+            <SmallBoardScreen palette={palette} onBack={() => setBoard('choose')} />
+          ) : (
+            <SmallBoardScreen palette={palette} rules={mebben} withMark onCoverage={onCoverage} onBack={() => setBoard('choose')} />
+          )
         ) : (
           <View style={styles.locked} testID="board-locked">
             <Text style={styles.lockedText}>{texts.boardLocked}</Text>
           </View>
         )
       ) : null}
-      {tab === 'skill' ? <SkillScreen palette={palette} records={skill} /> : null}
+      {tab === 'skill' ? <SkillScreen palette={palette} records={skill} coverage={coverage} /> : null}
 
       <View style={styles.tabs}>
         {(
@@ -210,6 +250,7 @@ export default function App() {
           ) : (
             <>
               <ScrollView style={styles.rules}>
+                <RulesAsk session={session} palette={palette} />
                 <RulesScreen />
               </ScrollView>
               <View style={styles.sheetActions}>
@@ -256,6 +297,9 @@ function makeStyles(p: Palette) {
   return StyleSheet.create({
     root: { flex: 1, backgroundColor: p.background },
     locked: { flex: 1, justifyContent: 'center', paddingHorizontal: spacing.xl },
+    choose: { flex: 1, width: '100%', maxWidth: 440, alignSelf: 'center', padding: spacing.lg, gap: spacing.md },
+    choice: { borderRadius: radius.card, borderWidth: 1, borderColor: p.border, backgroundColor: p.surface, padding: spacing.lg, gap: spacing.xs },
+    choiceTitle: { fontFamily: fonts.numeral, fontSize: 22, letterSpacing: -0.3, color: p.ink },
     lockedText: { fontFamily: fonts.text, fontSize: type.body.fontSize, lineHeight: type.body.lineHeight, color: p.muted, textAlign: 'center' },
     tabs: { flexDirection: 'row', justifyContent: 'center', gap: spacing.md, paddingVertical: spacing.md, borderTopWidth: 1, borderTopColor: p.border },
     tab: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },

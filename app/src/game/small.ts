@@ -17,9 +17,9 @@ import type { Move } from '../../../engine/moves';
 import { initialPosition } from '../../../engine/board';
 import { small } from '../../../engine/rules/small';
 import type { Intent } from '../../../engine/search';
-import type { PieceId, Position, Side, Square } from '../../../engine/types';
+import type { PieceId, Position, RuleSet, Side, Square } from '../../../engine/types';
 
-export type Phase = 'move' | 'reason' | 'opponent' | 'over';
+export type Phase = 'mark' | 'move' | 'reason' | 'opponent' | 'over';
 
 /** A reason the player may give before the move, built from what the engine sees. */
 export interface ReasonOffer {
@@ -37,6 +37,14 @@ export interface SmallState {
   readonly humanSide: Side;
   readonly position: Position;
   readonly phase: Phase;
+  /** the coverage step before each own move (CLAUDE.md 7, on the board) */
+  readonly withMark: boolean;
+  /** square indices the player marked this turn */
+  readonly marked: readonly number[];
+  /** own harmonies reachable within one move at the start of this turn */
+  readonly reachable: readonly ReachableHarmony[];
+  /** coverage of this turn's marking, null when nothing was reachable */
+  readonly coverage: number | null;
   readonly selected: PieceId | null;
   readonly pending: Move | null;
   readonly reasons: readonly ReasonOffer[];
@@ -52,18 +60,24 @@ export interface SmallState {
 }
 
 export type SmallAction =
-  | { type: 'new_game'; humanSide: Side }
+  | { type: 'new_game'; humanSide: Side; rules?: RuleSet; withMark?: boolean }
   | { type: 'tap'; square: Square }
+  | { type: 'confirm_mark' }
   | { type: 'reason'; id: string | null; strong: boolean }
   | { type: 'opponent_played'; turn: Turn; result: TurnResult; intent: Intent }
   | { type: 'opponent_passed' };
 
-export function newSmallGame(humanSide: Side): SmallState {
-  const position = initialPosition(small);
+export function newSmallGame(humanSide: Side, rules: RuleSet = small, withMark = false): SmallState {
+  const position = initialPosition(rules);
+  const mine = humanSide === 'white';
   return {
     humanSide,
     position,
-    phase: humanSide === 'white' ? 'move' : 'opponent',
+    phase: mine ? (withMark ? 'mark' : 'move') : 'opponent',
+    withMark,
+    marked: [],
+    reachable: mine ? reachableHarmonies(position, humanSide, 1) : [],
+    coverage: null,
     selected: null,
     pending: null,
     reasons: [],
@@ -122,6 +136,21 @@ export function reasonsFor(pos: Position, move: Move): ReasonOffer[] {
   return offers;
 }
 
+/** Squares of the harmonies the engine sees, for the coverage. */
+export function actualSquares(pos: Position, reachable: readonly ReachableHarmony[]): Set<number> {
+  const out = new Set<number>();
+  for (const h of reachable) for (const sq of h.squares) out.add(squareIndex(pos.rules, sq));
+  return out;
+}
+
+/** Coverage = |marked ∩ actual| / |actual|; null when nothing was reachable. */
+export function coverageOf(marked: readonly number[], actual: ReadonlySet<number>): number | null {
+  if (actual.size === 0) return null;
+  let hit = 0;
+  for (const m of new Set(marked)) if (actual.has(m)) hit++;
+  return hit / actual.size;
+}
+
 /** The field a move falls into: strong or weak, reason holds or not. */
 export function judge(strong: boolean, holds: boolean | null): Verdict {
   if (holds === null) return 'none';
@@ -132,9 +161,20 @@ export function judge(strong: boolean, holds: boolean | null): Verdict {
 export function reduceSmall(state: SmallState, action: SmallAction): SmallState {
   switch (action.type) {
     case 'new_game':
-      return newSmallGame(action.humanSide);
+      return newSmallGame(action.humanSide, action.rules ?? state.position.rules, action.withMark ?? state.withMark);
+
+    case 'confirm_mark': {
+      if (state.phase !== 'mark') return state;
+      const coverage = coverageOf(state.marked, actualSquares(state.position, state.reachable));
+      return { ...state, phase: 'move', coverage };
+    }
 
     case 'tap': {
+      if (state.phase === 'mark') {
+        const idx = squareIndex(state.position.rules, action.square);
+        const marked = state.marked.includes(idx) ? state.marked.filter((i) => i !== idx) : [...state.marked, idx];
+        return { ...state, marked };
+      }
       if (state.phase !== 'move') return state;
       const pos = state.position;
       const piece = pieceAt(pos, action.square);
@@ -177,10 +217,14 @@ export function reduceSmall(state: SmallState, action: SmallAction): SmallState 
     case 'opponent_played': {
       if (state.phase !== 'opponent') return state;
       const over = action.result.winner !== null;
+      const next = action.result.position;
       return {
         ...state,
-        position: action.result.position,
-        phase: over ? 'over' : 'move',
+        position: next,
+        phase: over ? 'over' : state.withMark ? 'mark' : 'move',
+        marked: [],
+        reachable: over ? [] : reachableHarmonies(next, state.humanSide, 1),
+        coverage: null,
         lastMove: action.turn.move,
         lastIntent: action.intent,
         winner: action.result.winner,
@@ -190,7 +234,9 @@ export function reduceSmall(state: SmallState, action: SmallAction): SmallState 
     }
 
     case 'opponent_passed':
-      return state.phase === 'opponent' ? { ...state, phase: 'move', turn: state.turn + 1 } : state;
+      return state.phase === 'opponent'
+        ? { ...state, phase: state.withMark ? 'mark' : 'move', marked: [], reachable: reachableHarmonies(state.position, state.humanSide, 1), coverage: null, turn: state.turn + 1 }
+        : state;
   }
 }
 

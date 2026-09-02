@@ -180,3 +180,21 @@ export async function sendHunt(session: Session, mediaType: 'image/jpeg' | 'imag
     throw e;
   }
 }
+
+/** The rules chat (CLAUDE.md 8.4): an answer phrased from the rule set only. Null when the server has no model. */
+export interface RuleAnswer {
+  readonly answer: string;
+  readonly grounded: boolean;
+  readonly model: string;
+  readonly remaining: number;
+  readonly version: number;
+}
+
+export async function askRule(session: Session, question: string): Promise<RuleAnswer | null> {
+  try {
+    return await request<RuleAnswer>('/v1/rules/ask', { method: 'POST', body: { question }, token: session.token });
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) return null;
+    throw e;
+  }
+}

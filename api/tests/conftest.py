@@ -44,4 +44,4 @@ def client(database_url: str):
     with TestClient(app) as c:
         yield c
     with psycopg.connect(database_url, autocommit=True) as conn:
-        conn.execute("TRUNCATE attempts, coverage_records, puzzles, accounts CASCADE")
+        conn.execute("TRUNCATE attempts, coverage_records, puzzles, accounts, rule_questions CASCADE")

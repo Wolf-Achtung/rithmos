@@ -9,6 +9,8 @@ import { HARMONY_KINDS } from '../../../engine/harmony';
 import { unlockedLevel } from '../../../jobs/src/practice';
 import { formatWeek } from '../coverage';
 import { hitRates, solvedAtLevel, weakestKind, weeklyHitTrend } from '../middles/skill';
+import { weeklyTrend, windowAverage } from '../coverage';
+import type { CoverageRecord } from '../coverage';
 import type { SkillRecord } from '../middles/skill';
 import { kindName, texts } from '../texts';
 import { fonts, radius, spacing, type } from '../theme';
@@ -17,9 +19,11 @@ import type { Palette } from '../theme';
 interface Props {
   readonly palette: Palette;
   readonly records: readonly SkillRecord[];
+  /** markings on the board (Stufe 5) */
+  readonly coverage?: readonly CoverageRecord[];
 }
 
-export function SkillScreen({ palette, records }: Props) {
+export function SkillScreen({ palette, records, coverage = [] }: Props) {
   const styles = useMemo(() => makeStyles(palette), [palette]);
   const rates = hitRates(records);
   const weeks = weeklyHitTrend(records).slice(-8);
@@ -47,6 +51,26 @@ export function SkillScreen({ palette, records }: Props) {
 
       <Text style={styles.small}>{lagging && records.length > 0 ? texts.skillLagging(lagging) : texts.skillLevel(level)}</Text>
       {lagging && records.length > 0 ? <Text style={styles.small}>{texts.skillLevel(level)}</Text> : null}
+
+      <Text style={styles.section}>{texts.skillBoardTitle}</Text>
+      {(() => {
+        const avg = windowAverage(coverage);
+        const weeks = weeklyTrend(coverage).slice(-6);
+        return avg === null ? (
+          <Text style={styles.small}>{texts.skillBoardNone}</Text>
+        ) : (
+          <View style={styles.rateRow} testID="skill-board">
+            <View style={styles.rateHead}>
+              <Text style={styles.small}>{texts.skillBoardLabel}</Text>
+              <Text style={styles.rateText}>{texts.skillBoardAverage(Math.round(avg * 100), Math.min(coverage.length, 50))}</Text>
+            </View>
+            <View style={styles.track}>
+              <View style={[styles.fill, { width: `${Math.round(avg * 100)}%` }]} />
+            </View>
+            <Text style={styles.small}>{weeks.map((w) => `${formatWeek(w.weekStart)}: ${Math.round(w.average * 100)} %`).join(' · ')}</Text>
+          </View>
+        );
+      })()}
 
       <Text style={styles.section}>{texts.skillWeeks}</Text>
       {weeks.length === 0 ? (
