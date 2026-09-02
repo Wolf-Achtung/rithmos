@@ -15,7 +15,7 @@ import type { Highlights } from '../components/Board';
 import { PillButton, makeTriadStyles } from '../components/Triad';
 import { newSmallGame, reduceSmall, targetsOf, victorySquares } from '../game/small';
 import { small } from '../../../engine/rules/small';
-import type { RuleSet } from '../../../engine/types';
+import type { PlacedPiece, RuleSet } from '../../../engine/types';
 import type { ReasonOffer } from '../game/small';
 import { texts } from '../texts';
 import { fonts, radius, spacing, type } from '../theme';
@@ -49,6 +49,13 @@ function intentSentence(intent: Intent): string {
     case 'develop':
       return texts.intent.develop;
   }
+}
+
+/** What the selected stone may do, from the rule set's data: the feedback teaches the rule. */
+function moveSentence(piece: PlacedPiece, rules: RuleSet): string {
+  if (piece.shape === 'pyramid') return texts.boardPyramidMove;
+  const m = rules.movement[piece.shape];
+  return texts.boardPieceMove(piece.shape, m.steps, m.directions);
 }
 
 function reasonLabel(r: ReasonOffer): string {
@@ -124,9 +131,13 @@ export function SmallBoardScreen({ palette, rules = small, withMark = false, onC
               ? texts.boardMarkResult(Math.round(state.coverage * 100))
               : state.withMark && state.reachable.length === 0 && state.phase === 'move'
                 ? texts.boardMarkNone
-                : state.lastIntent
-                  ? intentSentence(state.lastIntent)
-                  : texts.boardYourMove;
+                : state.phase === 'move' && state.selected && pieceById(state.position, state.selected)
+                  ? moveSentence(pieceById(state.position, state.selected)!, state.position.rules)
+                  : state.lastIntent
+                    ? intentSentence(state.lastIntent)
+                    : state.turn === 1
+                      ? texts.boardGoal
+                      : texts.boardYourMove;
   const verdictLine = state.verdict && state.verdict !== 'none' ? texts.verdict[state.verdict] : null;
 
   return (
