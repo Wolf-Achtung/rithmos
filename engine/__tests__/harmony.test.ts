@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { initialPosition, place, squareName } from '../board';
 import type { PieceInput } from '../board';
 import {
+  HARMONY_KINDS,
   findHarmonies,
   geometryOfFour,
   geometryOfThree,
@@ -10,6 +11,7 @@ import {
   harmonyKindsByMeans,
   harmonyKindsByMebben,
   harmonyKindsOfFour,
+  meanOf,
   reachableHarmonies,
   reachableHarmoniesBrute,
   victoryOf,
@@ -47,6 +49,25 @@ describe('double recognition: Mebben conditions against the mean formulas', () =
       for (let b = a + 1; b <= 200; b++)
         for (let c = b + 1; c <= 200; c++) {
           if (harmonyKinds(a, b, c).length > 1) throw new Error(`${a},${b},${c} has two kinds`);
+        }
+  });
+
+  it('meanOf is the inverse of recognition: the whole-number middle, or null', () => {
+    expect(meanOf('arithmetic', 2, 6)).toBe(4);
+    expect(meanOf('geometric', 5, 20)).toBe(10);
+    expect(meanOf('musical', 6, 12)).toBe(8);
+    expect(meanOf('arithmetic', 2, 5)).toBeNull(); // 3.5
+    expect(meanOf('geometric', 6, 12)).toBeNull(); // sqrt 72
+    expect(meanOf('musical', 2, 6)).toBe(3);
+    expect(meanOf('musical', 4, 6)).toBeNull(); // 4.8
+    expect(meanOf('arithmetic', 6, 2)).toBeNull(); // not ascending
+    expect(meanOf('geometric', 0, 4)).toBeNull();
+    for (let a = 1; a <= 120; a++)
+      for (let c = a + 1; c <= 120; c++)
+        for (const kind of HARMONY_KINDS) {
+          const b = meanOf(kind, a, c);
+          if (b === null) continue;
+          if (!harmonyKinds(a, b, c).includes(kind)) throw new Error(`meanOf(${kind}, ${a}, ${c}) = ${b} is not recognised`);
         }
   });
 

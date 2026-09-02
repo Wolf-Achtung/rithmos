@@ -59,6 +59,29 @@ export function harmonyKindsByMeans(a: number, b: number, c: number): HarmonyKin
 
 export const harmonyKinds = harmonyKindsByMebben;
 
+/**
+ * The mean of a and c for a kind, when it is a whole number; null otherwise.
+ * The inverse question of the recognition above: which b would close the
+ * harmony? Middles builds its puzzles and its distractors from this.
+ */
+export function meanOf(kind: HarmonyKind, a: number, c: number): number | null {
+  if (!(0 < a && a < c)) return null;
+  let b: number;
+  switch (kind) {
+    case 'arithmetic':
+      b = (a + c) / 2;
+      break;
+    case 'geometric':
+      b = Math.round(Math.sqrt(a * c));
+      if (b * b !== a * c) return null;
+      break;
+    case 'musical':
+      b = (2 * a * c) / (a + c);
+      break;
+  }
+  return Number.isInteger(b) ? b : null;
+}
+
 /** A sequence of values read in arrangement order: ascending one way or the other. */
 function ascending(values: readonly number[]): number[] | null {
   let up = true;
