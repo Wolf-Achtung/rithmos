@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from .db import make_pool
 from .llm import HUNT_SYSTEM, RULES_SYSTEM, provider_from_env, rules_from_env, vision_from_env
-from .routers import accounts, coverage, health, hunt, middles, narration, puzzles, rules
+from .routers import accounts, coverage, health, hunt, middles, narration, puzzles, quota, rules
 from .settings import Settings
 
 
@@ -46,6 +46,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(narration.router)
     app.include_router(hunt.router)
     app.include_router(rules.router)
+    app.include_router(quota.router)
     return app
 
 

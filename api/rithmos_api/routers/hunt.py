@@ -14,12 +14,12 @@ from pydantic import BaseModel, Field
 
 from ..auth import Account, current_account
 from ..llm import HuntGroup, clean_counts
+from ..quota import HUNT, require
 
 router = APIRouter(prefix="/v1", tags=["hunt"])
 log = logging.getLogger(__name__)
 
 MAX_IMAGE_BYTES = 3_000_000
-HUNTS_PER_ACCOUNT_PER_DAY = 6
 
 
 class HuntIn(BaseModel):
@@ -50,12 +50,7 @@ def hunt(body: HuntIn, request: Request, account: Account = Depends(current_acco
     if len(raw) > MAX_IMAGE_BYTES:
         raise HTTPException(status.HTTP_413_CONTENT_TOO_LARGE, "image too large")
     with request.app.state.pool.connection() as conn:
-        used = conn.execute(
-            "SELECT count(*) AS n FROM hunts WHERE account_id = %s AND created_at >= date_trunc('day', now())",
-            (account.id,),
-        ).fetchone()["n"]
-        if int(used) >= HUNTS_PER_ACCOUNT_PER_DAY:
-            raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "no more hunts today")
+        left = require(conn, account.id, HUNT)
         total = conn.execute("SELECT count(*) AS n FROM hunts WHERE created_at >= date_trunc('day', now())").fetchone()[
             "n"
         ]
@@ -71,5 +66,5 @@ def hunt(body: HuntIn, request: Request, account: Account = Depends(current_acco
     return HuntOut(
         groups=counts.groups,
         model=getattr(provider, "model", "unknown"),
-        remaining=HUNTS_PER_ACCOUNT_PER_DAY - int(used) - 1,
+        remaining=left - 1,
     )

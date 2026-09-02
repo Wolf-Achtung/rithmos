@@ -11,11 +11,11 @@ from pydantic import BaseModel, Field
 
 from ..auth import Account, current_account
 from ..llm import RULES_VERSION, check_answer, normalize_question
+from ..quota import RULES, require
 
 router = APIRouter(prefix="/v1", tags=["rules"])
 log = logging.getLogger(__name__)
 
-QUESTIONS_PER_ACCOUNT_PER_DAY = 20
 NOT_IN_RULES = "Das steht nicht in dieser Regelfassung."
 
 
@@ -38,12 +38,7 @@ def ask(body: QuestionIn, request: Request, account: Account = Depends(current_a
         raise HTTPException(status.HTTP_404_NOT_FOUND, "rules chat not configured")
     normalized = normalize_question(body.question)
     with request.app.state.pool.connection() as conn:
-        used = conn.execute(
-            "SELECT count(*) AS n FROM rule_questions WHERE account_id = %s AND created_at >= date_trunc('day', now())",
-            (account.id,),
-        ).fetchone()["n"]
-        if int(used) >= QUESTIONS_PER_ACCOUNT_PER_DAY:
-            raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "no more questions today")
+        left = require(conn, account.id, RULES)
         hit = conn.execute(
             "SELECT answer, grounded, model FROM rule_questions WHERE normalized = %s AND prompt_version = %s "
             "ORDER BY created_at DESC LIMIT 1",
@@ -81,6 +76,6 @@ def ask(body: QuestionIn, request: Request, account: Account = Depends(current_a
         answer=answer,
         grounded=grounded,
         model=model,
-        remaining=QUESTIONS_PER_ACCOUNT_PER_DAY - int(used) - 1,
+        remaining=left - 1,
         version=RULES_VERSION,
     )
