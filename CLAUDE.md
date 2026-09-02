@@ -63,7 +63,7 @@ Rechenlast.
 | **0** | Engine, API, Konten, Generator, Deploy-Kette | fertig, bleibt unverändert |
 | **1** | **Middles ohne Brett.** Ein Rätsel am Tag, drei Versuche, teilbares Ergebnis, Dreiklang zum Anhören, ein Satz dazu, wo dieses Mittel heute in der Welt steckt (fester Text) | gebaut |
 | **2** | Progression: erst arithmetisch, dann geometrisch, dann musikalisch, dann gemischt („welches Mittel?"), dann vier Zahlen mit zwei Mitteln. Deckung je Mittelart über Wochen | **jetzt**, auf dem Gerät gebaut |
-| **3** | Die Erzählerin: der Satz nach dem Lösen kommt vom Sprachmodell, in zwei Stimmen, cachebar pro Rätsel. Erste KI-Funktion, AI-Act-Kennzeichnung | danach |
+| **3** | Die Erzählerin: nach dem Lösen zwei Stimmen (Mönch, Analystin) und „Wer lügt?“ mit drei Erklärungen, eine stimmt. Der Generator liefert Wahrheit und Lügen als Fakten, das Modell formuliert, der Server prüft jede Zahl. Cachebar pro Rätsel, Tageslimit, AI-Act-Kennzeichnung | gebaut, Schlüssel auf Railway offen |
 | **4** | Das kleine Brett: 4 × 8, acht Steine, eine Schlagart, Sieg = eine Harmonie legen. Begründungsmodus, Gegner mit offenen Karten | wer Stufe 2 durchhat |
 | **5** | Das volle Brett nach Mebben, Regelchat, Deckung auf dem Brett | für die, die es wollen |
 | **6** | Abo, serverseitige Belegprüfung. **Wolf-Ping vorher** | zuletzt |
@@ -93,6 +93,31 @@ Stufe 4 sie in vereinfachter Form zurückholt.
   Brettform desselben Tages bleibt im Datensatz für Stufe 4.
 - Der Dreiklang klingt in den Verhältnissen der drei Zahlen selbst, a : b : c über
   einem freien Grundton. Durch c ≤ 4·a bleibt er innerhalb von zwei Oktaven.
+- **Stimmen statt Tippen.** Wo ein Dauerton möglich ist (Web Audio) und der Klang an
+  ist, gibt es keine Angebote: Der Spieler zieht den fehlenden Ton zwischen die
+  beiden gegebenen, ganzzahlige Mittel rasten ein, Loslassen ist die Antwort
+  (± 25 Cent). Die Abweichung in Cent wird mit dem Ergebnis gespeichert. Stumm oder
+  ohne Dauerton bleiben die vier Angebote. Auf iOS und Android braucht der Dauerton
+  eine weitere Abhängigkeit (`react-native-audio-api`) — Wolf-Ping, bis dahin Angebote.
+
+- **Fundstück des Tages.** Jeder zweite Tag ist ein echtes Vorkommen aus
+  `engine/rules/finds.ts` (Monochord, Villa Emo, Blendenreihe, F1-Score, …): die
+  Zahlen des Fundstücks, nach dem Lösen sein Satz, Ort und Quelle. Ein Test lässt
+  jedes Fundstück durch die Erkennung; was nicht verifiziert, kommt nicht ins
+  Produkt. Die Übung nimmt an jedem vierten Rätsel der Stufen 1–3 ein Fundstück
+  ihrer Mittelart.
+
+- **Die Kette.** Ein zweites Tagesrätsel, konstruktiv statt abfragend: zwölf Zahlen
+  liegen aus, der Spieler legt sie zu einer Kette, in der je drei aufeinander
+  folgende eine Harmonie bilden (2 · 4 · 6 · 9 · 12 · 16 · 24 · 48). Die längste
+  Kette kennt die Suche (`jobs/src/chain.ts`); Ergebnis ist die erreichte Länge,
+  teilbar als `Kette Nº 47 · 6/7`. Auf dem Gerät erzeugt, kein Server.
+
+- **Harmonie-Jagd.** Ein Foto von etwas Zählbarem; der Spieler tippt zuerst, ob
+  darin eine Harmonie steckt; dann zählt das Bildmodell nur (Namen und Anzahlen,
+  `POST /v1/hunt`, sechs Jagden pro Konto und Tag, kein Bild wird gespeichert),
+  und die Engine in der App entscheidet, welche Anzahlen ein Mittel bilden. Das
+  Modell nennt nie eine Harmonie. Erreichbar hinter dem Zahnrad.
 
 ### Üben, Stufe 2, genau
 

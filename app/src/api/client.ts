@@ -58,6 +58,27 @@ export async function listCoverage(session: Session): Promise<RemoteCoverageReco
   return r.records;
 }
 
+export interface RemoteMiddlesResult {
+  readonly id: string;
+  readonly t: string;
+  readonly mode: 'daily' | 'practice';
+  readonly level: number;
+  readonly kind: HarmonyKind;
+  readonly solved: boolean;
+  readonly tries: number;
+  readonly cents: number | null;
+  readonly device: string;
+}
+
+export async function uploadMiddlesResults(session: Session, records: readonly RemoteMiddlesResult[]): Promise<{ stored: number; total: number }> {
+  return request('/v1/middles/results', { method: 'PUT', body: { records }, token: session.token });
+}
+
+export async function listMiddlesResults(session: Session): Promise<RemoteMiddlesResult[]> {
+  const r = await request<{ records: RemoteMiddlesResult[] }>('/v1/middles/results', { token: session.token });
+  return r.records;
+}
+
 export interface PuzzlePiece {
   readonly id: string;
   readonly side: Side;
@@ -71,6 +92,7 @@ export interface PuzzleTriad {
   readonly a: number;
   readonly c: number;
   readonly options: readonly number[];
+  readonly find?: { readonly id: string; readonly title: string; readonly where: string; readonly sentence: string; readonly source: string } | null;
 }
 
 export interface Puzzle {
@@ -122,4 +144,39 @@ export async function submitAttempt(session: Session, date: string, attempt: Att
 
 export async function fetchDistribution(date: string): Promise<Distribution> {
   return request(`/v1/puzzles/${date}/distribution`);
+}
+
+/** The narrator (Stufe 3): two voices and three explanations, one true. Null when the server has none. */
+export interface Narration {
+  readonly monk: string;
+  readonly analyst: string;
+  readonly statements: readonly string[];
+  readonly truth: number;
+  readonly model: string;
+  readonly version: number;
+}
+
+export async function fetchNarration(session: Session, date: string): Promise<Narration | null> {
+  try {
+    return await request<Narration>(`/v1/puzzles/${date}/narration`, { token: session.token });
+  } catch (e) {
+    if (e instanceof ApiError && (e.status === 404 || e.status === 403)) return null;
+    throw e;
+  }
+}
+
+/** The hunt (Zug F): the vision model counts things in a photo. Null when the server has no model. */
+export interface HuntResult {
+  readonly groups: readonly { readonly label: string; readonly count: number }[];
+  readonly model: string;
+  readonly remaining: number;
+}
+
+export async function sendHunt(session: Session, mediaType: 'image/jpeg' | 'image/png' | 'image/webp', imageBase64: string): Promise<HuntResult | null> {
+  try {
+    return await request<HuntResult>('/v1/hunt', { method: 'POST', body: { media_type: mediaType, image: imageBase64 }, token: session.token });
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) return null;
+    throw e;
+  }
 }

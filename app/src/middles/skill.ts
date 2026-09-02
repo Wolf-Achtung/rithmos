@@ -18,9 +18,21 @@ export interface SkillRecord {
   readonly kind: HarmonyKind;
   readonly solved: boolean;
   readonly tries: number;
+  /** deviation of a tuned answer from the mean, in cents; absent when tapped */
+  readonly cents?: number;
+  /** true once the server has the record */
+  readonly synced?: boolean;
 }
 
 export const SKILL_WINDOW = 50;
+
+/** Union of local and remote records by id; the local copy wins, everything present counts as synced. */
+export function mergeSkill(local: readonly SkillRecord[], remote: readonly SkillRecord[]): SkillRecord[] {
+  const byId = new Map<string, SkillRecord>();
+  for (const r of remote) byId.set(r.id, { ...r, synced: true });
+  for (const r of local) byId.set(r.id, { ...r, synced: byId.has(r.id) || r.synced === true });
+  return [...byId.values()].sort((a, b) => a.t - b.t || (a.id < b.id ? -1 : 1));
+}
 
 export interface HitRate {
   readonly kind: HarmonyKind;

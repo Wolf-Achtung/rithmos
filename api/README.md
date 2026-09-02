@@ -28,6 +28,8 @@ in the repository root).
 | GET | `/v1/puzzles/today`, `/v1/puzzles/{date}` | optional | the puzzle without its solution |
 | POST | `/v1/puzzles/{date}/attempts` | bearer | the one attempt, as `move` (board) or `answer` (triad); returns solved, solution, harmony, distribution |
 | GET | `/v1/puzzles/{date}/distribution` | – | attempts, solved, histogram of tries |
+| PUT | `/v1/middles/results` | bearer | idempotent upload of finished Middles puzzles (daily and practice), keyed by client id |
+| GET | `/v1/middles/results` | bearer | every Middles result of the account across devices |
 | POST | `/v1/admin/puzzles` | `x-jobs-token` | ingestion from the nightly job |
 
 ## Railway

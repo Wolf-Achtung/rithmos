@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { HARMONY_KINDS, harmonyKinds, meanOf } from '../../engine/harmony';
-import { generateMiddles, generateTriad, harmonicTriples, isoDate, middlesNumber, mulberry32, seedForDate, triadCandidates, triadOptions, verifyMiddles } from './middles';
+import { findForDate, generateMiddles, narrationFacts, generateTriad, harmonicTriples, isoDate, middlesNumber, mulberry32, seedForDate, triadCandidates, triadOptions, verifyMiddles } from './middles';
+import { finds } from '../../engine/rules/finds';
 
 describe('Middles generator', () => {
   it('both sides have harmonic triples among their stones', () => {
@@ -76,6 +77,31 @@ describe('the triad', () => {
     expect(options.every((v) => v >= 1)).toBe(true);
   });
 
+  it('every other day is a find, cycling through the table, with the numbers of the find', () => {
+    expect(findForDate('2026-09-01')).toBeNull(); // Nº 1
+    expect(findForDate('2026-09-02')?.id).toBe(finds[0]!.id); // Nº 2
+    expect(findForDate('2026-09-04')?.id).toBe(finds[1]!.id);
+    const t = generateTriad('2026-09-02');
+    expect(t.find?.id).toBe(finds[0]!.id);
+    expect([t.a, t.b, t.c]).toEqual([...finds[0]!.values]);
+    expect(t.find).not.toHaveProperty('values');
+    expect(verifyMiddles(generateMiddles('2026-09-02')).valid).toBe(true);
+    const wrongFind = generateMiddles('2026-09-02');
+    expect(verifyMiddles({ ...wrongFind, triad: { ...wrongFind.triad, find: { ...wrongFind.triad.find!, id: finds[1]!.id } } }).reason).toBe('find does not match its numbers');
+  });
+
+  it('narration facts: the truth, two engine-built lies, the reduced ratio', () => {
+    const f = narrationFacts('musical', 6, 8, 12);
+    expect(f.truth).toEqual({ kind: 'musical', value: 8 });
+    expect(f.lies[0]).toEqual({ kind: 'musical', value: 9 }); // the arithmetic mean wearing the musical name
+    expect(f.lies[1]).toEqual({ kind: 'arithmetic', value: 8 }); // the right number, the wrong kind
+    expect(f.ratio).toEqual([3, 4, 6]);
+    const g = narrationFacts('geometric', 28, 42, 63);
+    expect(g.lies[0].value).not.toBe(42); // no other whole mean: a neighbour instead
+    expect(g.ratio).toEqual([4, 6, 9]);
+    expect(generateMiddles('2026-09-01').solution.facts.truth.value).toBe(generateMiddles('2026-09-01').solution.b);
+  });
+
   it('a season of triads: deterministic, valid, all three kinds, small numbers', () => {
     const kinds = new Set<string>();
     for (let i = 0; i < 90; i++) {
@@ -85,7 +111,7 @@ describe('the triad', () => {
       kinds.add(t.kind);
       expect(harmonyKinds(t.a, t.b, t.c)).toEqual([t.kind]);
       expect(t.options).toContain(t.b);
-      expect(t.c).toBeLessThanOrEqual(64);
+      expect(t.c).toBeLessThanOrEqual(t.find ? 4 * t.a : 64);
       for (const other of HARMONY_KINDS) {
         const m = meanOf(other, t.a, t.c);
         if (m !== null) expect(t.options, `${date} ${other} mean ${m}`).toContain(m);

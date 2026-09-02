@@ -7,13 +7,16 @@ import type { ReactNode } from 'react';
 import { Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { mebben } from '../engine/rules/mebben';
 import type { Session } from './src/api/client';
+import { mergeSkill } from './src/middles/skill';
 import type { SkillRecord } from './src/middles/skill';
 import { MiddlesScreen } from './src/screens/MiddlesScreen';
+import { ChainScreen } from './src/screens/ChainScreen';
+import { HuntScreen } from './src/screens/HuntScreen';
 import { PracticeScreen } from './src/screens/PracticeScreen';
 import { RulesScreen } from './src/screens/RulesScreen';
 import { SkillScreen } from './src/screens/SkillScreen';
 import { store } from './src/storage';
-import { ensureSession } from './src/sync';
+import { ensureSession, syncSkill } from './src/sync';
 import { texts } from './src/texts';
 import { fonts, palettes, radius, spacing, type } from './src/theme';
 import type { Palette, ThemeName } from './src/theme';
@@ -21,7 +24,7 @@ import type { Palette, ThemeName } from './src/theme';
 const SETTINGS_KEY = 'middles:settings';
 const SKILL_KEY = 'middles:skill';
 
-type Tab = 'today' | 'practice' | 'skill';
+type Tab = 'today' | 'chain' | 'practice' | 'skill';
 
 interface Settings {
   readonly sound: boolean;
@@ -46,7 +49,7 @@ export default function App() {
   const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [settingsReady, setSettingsReady] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
-  const [sheet, setSheet] = useState<'none' | 'settings' | 'rules'>('none');
+  const [sheet, setSheet] = useState<'none' | 'settings' | 'rules' | 'hunt'>('none');
   const [tab, setTab] = useState<Tab>('today');
   const [skill, setSkill] = useState<SkillRecord[]>([]);
 
@@ -59,7 +62,17 @@ export default function App() {
       setSkill(records);
       setSettingsReady(true);
       const s = await ensureSession();
-      if (alive) setSession(s);
+      if (!alive) return;
+      setSession(s);
+      if (s) {
+        try {
+          const merged = await syncSkill(s, records);
+          if (alive) setSkill((prev) => mergeSkill(prev, merged));
+          void store.write(SKILL_KEY, merged);
+        } catch {
+          // offline: the device copy stands
+        }
+      }
     })();
     return () => {
       alive = false;
@@ -78,6 +91,20 @@ export default function App() {
     });
   }
 
+  // push what the server lacks, a moment after a puzzle finishes
+  useEffect(() => {
+    if (!session || !skill.some((r) => !r.synced)) return;
+    const handle = setTimeout(() => {
+      syncSkill(session, skill)
+        .then((merged) => {
+          setSkill((prev) => mergeSkill(prev, merged));
+          void store.write(SKILL_KEY, merged);
+        })
+        .catch(() => undefined);
+    }, 800);
+    return () => clearTimeout(handle);
+  }, [session, skill]);
+
   /** One record per puzzle: a repeated settlement of the same day or round changes nothing. */
   function onSkill(record: SkillRecord) {
     setSkill((prev) => {
@@ -93,6 +120,7 @@ export default function App() {
   return (
     <SafeAreaView style={styles.root}>
       {tab === 'today' ? <MiddlesScreen session={session} palette={palette} soundOn={settings.sound} onOpenSettings={() => setSheet('settings')} onSkill={onSkill} /> : null}
+      {tab === 'chain' ? <ChainScreen palette={palette} soundOn={settings.sound} /> : null}
       {tab === 'practice' ? <PracticeScreen palette={palette} soundOn={settings.sound} records={skill} onSkill={onSkill} /> : null}
       {tab === 'skill' ? <SkillScreen palette={palette} records={skill} /> : null}
 
@@ -100,6 +128,7 @@ export default function App() {
         {(
           [
             ['today', texts.tabToday],
+            ['chain', texts.tabChain],
             ['practice', texts.tabPractice],
             ['skill', texts.tabSkill],
           ] as const
@@ -142,10 +171,25 @@ export default function App() {
               </Row>
               <Text style={styles.note}>{texts.ruleSetNote(mebben.name, mebben.source)}</Text>
               <View style={styles.sheetActions}>
+                <Pressable onPress={() => setSheet('hunt')} style={styles.textButton} testID="settings-hunt">
+                  <Text style={styles.textButtonLabel}>{texts.hunt}</Text>
+                </Pressable>
                 <Pressable onPress={() => setSheet('rules')} style={styles.textButton} testID="settings-rules">
                   <Text style={styles.textButtonLabel}>{texts.rules}</Text>
                 </Pressable>
                 <Pressable onPress={() => setSheet('none')} style={styles.textButton} testID="settings-close">
+                  <Text style={styles.textButtonLabel}>{texts.close}</Text>
+                </Pressable>
+              </View>
+            </>
+          ) : sheet === 'hunt' ? (
+            <>
+              <HuntScreen session={session} palette={palette} />
+              <View style={styles.sheetActions}>
+                <Pressable onPress={() => setSheet('settings')} style={styles.textButton} testID="hunt-back">
+                  <Text style={styles.textButtonLabel}>{texts.settings}</Text>
+                </Pressable>
+                <Pressable onPress={() => setSheet('none')} style={styles.textButton} testID="hunt-close">
                   <Text style={styles.textButtonLabel}>{texts.close}</Text>
                 </Pressable>
               </View>
@@ -198,7 +242,7 @@ function Toggle<T extends string | boolean>({ options, value, onChange, styles, 
 function makeStyles(p: Palette) {
   return StyleSheet.create({
     root: { flex: 1, backgroundColor: p.background },
-    tabs: { flexDirection: 'row', justifyContent: 'center', gap: spacing.xl, paddingVertical: spacing.md, borderTopWidth: 1, borderTopColor: p.border },
+    tabs: { flexDirection: 'row', justifyContent: 'center', gap: spacing.lg, paddingVertical: spacing.md, borderTopWidth: 1, borderTopColor: p.border },
     tab: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
     tabLabel: { fontFamily: fonts.textMedium, fontSize: type.small.fontSize, color: p.muted, letterSpacing: 0.4 },
     tabActive: { color: p.accent },

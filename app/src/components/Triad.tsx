@@ -101,6 +101,7 @@ export function makeTriadStyles(p: Palette, width: number, digits: number, slots
     numeral: { fontFamily: fonts.numeralLight, fontSize: numeralSize, lineHeight: numeralSize * 1.08, letterSpacing: type.numeral.letterSpacing * (numeralSize / type.numeral.fontSize), color: p.ink, textAlign: 'center', flexShrink: 0 },
     numeralAccent: { fontFamily: fonts.numeral, color: p.accent, ...glow(p.accentGlow) },
     numeralMissing: { fontFamily: fonts.numeral, color: p.missing, ...glow(p.missingGlow) },
+    numeralLive: { fontFamily: fonts.numeralLight, fontSize: numeralSize * 0.7, lineHeight: numeralSize * 1.08 },
     waves: { marginTop: spacing.xl, gap: spacing.md },
     waveRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
     wave: { flex: 1, height: 28, flexDirection: 'row', alignItems: 'center', gap: 3 },
@@ -129,5 +130,13 @@ export function makeTriadStyles(p: Palette, width: number, digits: number, slots
     box: { width: 14, height: 14, borderRadius: radius.box, backgroundColor: p.trackEmpty },
     boxWrong: { backgroundColor: p.wrong },
     boxSolved: { backgroundColor: p.accent },
+    voices: { width: '100%', gap: spacing.sm, marginTop: spacing.md },
+    voice: { fontFamily: fonts.text, fontSize: type.small.fontSize + 1, lineHeight: type.small.lineHeight + 4, color: p.inkSoft },
+    voiceName: { fontFamily: fonts.textMedium, color: p.ink },
+    statement: { borderRadius: radius.card, borderWidth: 1, borderColor: p.border, backgroundColor: p.surface, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+    statementTrue: { borderColor: p.accent },
+    statementLie: { borderColor: p.wrong, opacity: 0.6 },
+    statementText: { fontFamily: fonts.text, fontSize: type.small.fontSize + 1, lineHeight: type.small.lineHeight + 4, color: p.ink },
+    aiLabel: { fontFamily: fonts.text, fontSize: 11, color: p.muted, textAlign: 'center', marginTop: spacing.xs },
   });
 }

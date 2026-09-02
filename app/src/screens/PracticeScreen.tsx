@@ -4,19 +4,23 @@
  * per mean. Same picture as the daily: numerals, waves, offers.
  */
 import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, Text, View, useWindowDimensions } from 'react-native';
+import { Linking, Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { Easing, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 import { HARMONY_KINDS } from '../../../engine/harmony';
 import type { HarmonyKind } from '../../../engine/harmony';
 import { choosePracticeLevel, generatePractice, practiceKind, practiceSeed, unlockedLevel, UNLOCK_AFTER } from '../../../jobs/src/practice';
 import type { PracticePuzzle } from '../../../jobs/src/practice';
 import { Numeral, Offer, PillButton, Wave, intervalLabel, makeTriadStyles } from '../components/Triad';
+import { Tuner } from '../components/Tuner';
+import type { TunerState } from '../components/Tuner';
 import type { Swing, TriadStyles } from '../components/Triad';
 import { chordFrequencies } from '../middles/chord';
 import { MAX_TRIES, feedbackFor } from '../middles/logic';
 import { solvedAtLevel, weakestKind } from '../middles/skill';
 import type { SkillRecord } from '../middles/skill';
 import { playChord } from '../middles/sound';
+import { canTune } from '../middles/tone';
+import { judgeRelease } from '../middles/tuning';
 import { kindName, texts, triadSentence } from '../texts';
 import type { Palette } from '../theme';
 
@@ -34,6 +38,8 @@ interface Round {
   readonly taps: readonly (number | HarmonyKind)[];
   readonly solved: boolean;
   readonly finished: boolean;
+  /** deviation of the last released tone, in cents; absent when tapped */
+  readonly cents?: number;
 }
 
 const WHICH_TRIES = 2;
@@ -46,7 +52,7 @@ function nextRound(records: readonly SkillRecord[]): Round {
   const count = records.filter((r) => r.mode === 'practice').length;
   const unlocked = unlockedLevel((level) => solvedAtLevel(records, level));
   const level = choosePracticeLevel(unlocked, weakestKind(records), count);
-  return { puzzle: generatePractice(level, practiceSeed(count)), count, taps: [], solved: false, finished: false };
+  return { puzzle: generatePractice(level, practiceSeed(count), count), count, taps: [], solved: false, finished: false };
 }
 
 function applyTap(round: Round, tap: number | HarmonyKind): Round {
@@ -58,6 +64,16 @@ function applyTap(round: Round, tap: number | HarmonyKind): Round {
   if (puzzle.form === 'which') solved = tap === puzzle.kind;
   if (puzzle.form === 'four') solved = puzzle.answers.every((a) => taps.includes(a));
   return { ...round, taps, solved, finished: solved || wrong >= maxTries(puzzle) };
+}
+
+/** A released tone on a triad round: the answer it stands for, and its deviation. */
+function applyRelease(round: Round, value: number): Round {
+  const { puzzle } = round;
+  if (puzzle.form !== 'triad') return round;
+  const { a, c, kind } = puzzle.triad;
+  const verdict = judgeRelease(value, puzzle.b, kind, a, c);
+  const answer = verdict.kind === 'right' ? puzzle.b : verdict.kind === 'otherMean' ? verdict.value : Math.round(value * 10) / 10;
+  return { ...applyTap(round, answer), cents: verdict.cents };
 }
 
 function isRight(p: PracticePuzzle, tap: number | HarmonyKind): boolean {
@@ -74,6 +90,7 @@ export function PracticeScreen({ palette, soundOn, records, onSkill }: Props) {
   const digits = useMemo(() => digitsOf(puzzle), [puzzle]);
   const styles = useMemo(() => makeTriadStyles(palette, width, digits, slots), [palette, width, digits, slots]);
   const swing = useSharedValue(0);
+  const [live, setLive] = useState<TunerState | null>(null);
 
   const values = useMemo(() => valuesOf(puzzle), [puzzle]);
   const chord = useMemo(() => chordFrequencies([values[0]!, values[1]!, values[2]!]).concat(values.slice(3).map((v) => (220 * v) / values[0]!)), [values]);
@@ -86,7 +103,7 @@ export function PracticeScreen({ palette, soundOn, records, onSkill }: Props) {
       if (soundOn) void playChord(chord).catch(() => undefined);
     }
     const wrong = round.taps.filter((t) => !isRight(puzzle, t)).length;
-    onSkill({ id: `practice:${round.count}`, t: Date.now(), mode: 'practice', level: puzzle.level, kind: practiceKind(puzzle), solved: round.solved, tries: wrong + 1 });
+    onSkill({ id: `practice:${round.count}`, t: Date.now(), mode: 'practice', level: puzzle.level, kind: practiceKind(puzzle), solved: round.solved, tries: wrong + 1, ...(round.cents === undefined ? {} : { cents: round.cents }) });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [round.finished]);
 
@@ -95,9 +112,17 @@ export function PracticeScreen({ palette, soundOn, records, onSkill }: Props) {
     setRound(applyTap(round, t));
   }
 
+  function release(value: number) {
+    if (round.finished) return;
+    setRound(applyRelease(round, value));
+  }
+
   function next() {
+    setLive(null);
     setRound(nextRound(records));
   }
+
+  const tuning = canTune && soundOn && !round.finished && puzzle.form === 'triad';
 
   const wrongTaps = round.taps.filter((t) => !isRight(puzzle, t)).length;
   const unlocked = unlockedLevel((level) => solvedAtLevel(records, level));
@@ -116,7 +141,7 @@ export function PracticeScreen({ palette, soundOn, records, onSkill }: Props) {
         </View>
       </View>
 
-      {puzzle.form === 'triad' ? <TriadRound round={round} styles={styles} swing={swing} palette={palette} /> : null}
+      {puzzle.form === 'triad' ? <TriadRound round={round} styles={styles} swing={swing} palette={palette} live={live} /> : null}
       {puzzle.form === 'which' ? <WhichRound round={round} styles={styles} swing={swing} palette={palette} /> : null}
       {puzzle.form === 'four' ? <FourRound round={round} styles={styles} swing={swing} palette={palette} /> : null}
 
@@ -124,7 +149,9 @@ export function PracticeScreen({ palette, soundOn, records, onSkill }: Props) {
         {sentenceFor(round)}
       </Text>
 
-      {!round.finished ? (
+      {tuning && puzzle.form === 'triad' ? (
+        <Tuner a={puzzle.triad.a} c={puzzle.triad.c} palette={palette} soundOn={soundOn} onChange={setLive} onRelease={release} testID="practice-tuner" />
+      ) : !round.finished ? (
         <View style={styles.offers} testID="practice-offers">
           {puzzle.form === 'which'
             ? HARMONY_KINDS.map((k) => <Offer key={k} label={kindName[k]} onPress={() => tap(k)} state={round.taps.includes(k) ? 'wrong' : 'open'} styles={styles} testID={`offer-${k}`} wide />)
@@ -134,6 +161,13 @@ export function PracticeScreen({ palette, soundOn, records, onSkill }: Props) {
         </View>
       ) : (
         <View style={styles.after}>
+          {puzzle.form === 'triad' && puzzle.triad.find ? (
+            <Pressable onPress={() => void Linking.openURL(puzzle.triad.find!.source).catch(() => undefined)} testID="practice-find" hitSlop={8}>
+              <Text style={styles.small}>
+                {texts.findLine(puzzle.triad.find.title, puzzle.triad.find.where)} · <Text style={{ color: palette.accent }}>{texts.findSource}</Text>
+              </Text>
+            </Pressable>
+          ) : null}
           <PillButton label={texts.next} onPress={next} styles={styles} testID="practice-next" />
         </View>
       )}
@@ -174,10 +208,10 @@ function sentenceFor(round: Round): string {
   const last = taps[taps.length - 1];
   if (puzzle.form === 'triad') {
     const { a, c, kind } = puzzle.triad;
-    if (finished) return solved ? triadSentence(kind, a, puzzle.b, c, round.count) : texts.triadRevealed(puzzle.b);
+    if (finished) return solved ? (puzzle.triad.find?.sentence ?? triadSentence(kind, a, puzzle.b, c, round.count)) : texts.triadRevealed(puzzle.b);
     if (typeof last !== 'number') return texts.triadQuestion(kind);
     const f = feedbackFor(puzzle.triad, last);
-    return f.kind === 'otherMean' ? texts.triadOtherMean(last, f.mean) : texts.triadWrong(last);
+    return f.kind === 'otherMean' ? texts.triadOtherMean(last, f.mean) : Number.isInteger(last) ? texts.triadWrong(last) : texts.triadOff(last);
   }
   if (puzzle.form === 'which') {
     const [a, b, c] = puzzle.values;
@@ -192,23 +226,35 @@ function sentenceFor(round: Round): string {
   return texts.fourWrong(last);
 }
 
-type RoundProps = { round: Round; styles: TriadStyles; swing: Swing; palette: Palette };
+type RoundProps = { round: Round; styles: TriadStyles; swing: Swing; palette: Palette; live?: TunerState | null };
 
-function TriadRound({ round, styles, swing, palette }: RoundProps) {
+function TriadRound({ round, styles, swing, palette, live }: RoundProps) {
   const p = round.puzzle;
   if (p.form !== 'triad') return null;
   const { a, c } = p.triad;
   const { finished, solved } = round;
+  const liveValue = live ? (live.snap ? String(live.snap.value) : live.value.toFixed(1).replace('.', ',')) : '?';
   return (
     <>
       <View style={styles.numbers}>
         <Numeral value={a} styles={styles} swing={swing} rate={1} />
-        {finished ? <Numeral value={p.b} styles={styles} swing={swing} rate={p.b / a} accent={solved ? 'accent' : 'missing'} /> : <Text style={[styles.numeral, styles.numeralMissing]}>?</Text>}
+        {finished ? (
+          <Numeral value={p.b} styles={styles} swing={swing} rate={p.b / a} accent={solved ? 'accent' : 'missing'} />
+        ) : (
+          <Text style={[styles.numeral, styles.numeralMissing, live?.snap && styles.numeralAccent, live && !live.snap && styles.numeralLive]}>{liveValue}</Text>
+        )}
         <Numeral value={c} styles={styles} swing={swing} rate={c / a} />
       </View>
       <View style={styles.waves}>
         <Wave cycles={1} label={String(a)} styles={styles} swing={swing} color={palette.accent} muted={palette.muted} />
-        <Wave cycles={finished ? p.b / a : 0} label={finished ? intervalLabel(p.b, a) : '?'} styles={styles} swing={swing} color={solved ? palette.accent : palette.missing} muted={palette.muted} />
+        <Wave
+          cycles={finished ? p.b / a : live ? live.value / a : 0}
+          label={finished ? intervalLabel(p.b, a) : live?.snap ? intervalLabel(live.snap.value, a) : '?'}
+          styles={styles}
+          swing={swing}
+          color={solved || live?.snap ? palette.accent : palette.missing}
+          muted={palette.muted}
+        />
         <Wave cycles={c / a} label={intervalLabel(c, a)} styles={styles} swing={swing} color={palette.accent} muted={palette.muted} />
       </View>
     </>

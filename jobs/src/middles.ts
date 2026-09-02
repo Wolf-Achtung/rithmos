@@ -11,6 +11,8 @@ import type { PieceInput } from '../../engine/board';
 import { HARMONY_KINDS, findHarmonies, harmonyKinds, meanOf } from '../../engine/harmony';
 import type { HarmonyKind } from '../../engine/harmony';
 import { reachableSquares } from '../../engine/moves';
+import { finds } from '../../engine/rules/finds';
+import type { Find } from '../../engine/rules/finds';
 import { mebben } from '../../engine/rules/mebben';
 import { solvePuzzle } from '../../engine/solver';
 import type { PieceId, Side, SimpleShape, Square } from '../../engine/types';
@@ -35,6 +37,41 @@ export interface Triad {
   readonly c: number;
   /** four offers, shuffled; exactly one is the answer */
   readonly options: readonly number[];
+  /** the real occurrence these numbers come from, when the day has one */
+  readonly find?: TriadFind;
+}
+
+/** What the player sees of a find: never the middle value before solving. */
+export type TriadFind = Pick<Find, 'id' | 'title' | 'where' | 'sentence' | 'source'>;
+
+export function triadFind(f: Find): TriadFind {
+  return { id: f.id, title: f.title, where: f.where, sentence: f.sentence, source: f.source };
+}
+
+/**
+ * Facts for the narrator (CLAUDE.md 8.1, Stufe 3): the engine states what is
+ * true and builds the lies; the language model only phrases them. Stored with
+ * the solution, never served before the puzzle is finished.
+ */
+export interface NarrationFacts {
+  readonly truth: { readonly kind: HarmonyKind; readonly value: number };
+  /** two statements that sound right and are wrong: the other mean's value, the wrong kind */
+  readonly lies: readonly [{ readonly kind: HarmonyKind; readonly value: number }, { readonly kind: HarmonyKind; readonly value: number }];
+  /** the ratio a : b : c reduced, for the monk's ear */
+  readonly ratio: readonly [number, number, number];
+}
+
+export function narrationFacts(kind: HarmonyKind, a: number, b: number, c: number): NarrationFacts {
+  const others = HARMONY_KINDS.filter((k) => k !== kind);
+  const otherValue = others.map((k) => meanOf(k, a, c)).find((v): v is number => v !== null && v !== b);
+  const lieValue = { kind, value: otherValue ?? (b + 1 < c ? b + 1 : b - 1) };
+  const lieKind = { kind: others[0]!, value: b };
+  const g = gcd(gcd(a, b), c);
+  return { truth: { kind, value: b }, lies: [lieValue, lieKind], ratio: [a / g, b / g, c / g] };
+}
+
+function gcd(x: number, y: number): number {
+  return y === 0 ? x : gcd(y, x % y);
 }
 
 export interface MiddlesPuzzle {
@@ -43,7 +80,7 @@ export interface MiddlesPuzzle {
   readonly side: Side;
   readonly pieces: readonly PuzzlePiece[];
   readonly goal: { readonly kind: 'harmony' };
-  readonly solution: { readonly pieceId: PieceId; readonly from: string; readonly to: string; readonly b: number };
+  readonly solution: { readonly pieceId: PieceId; readonly from: string; readonly to: string; readonly b: number; readonly facts: NarrationFacts };
   readonly harmony: { readonly kinds: readonly HarmonyKind[]; readonly values: readonly number[] };
   /** 1 easy .. 3 hard, for the board form */
   readonly difficulty: 1 | 2 | 3;
@@ -161,7 +198,7 @@ function randomSquare(rnd: () => number, taken: Set<string>, pred: (sq: Square) 
 }
 
 /** The board form alone, before the triad is attached. */
-type BoardPuzzle = Omit<MiddlesPuzzle, 'triad' | 'solution'> & { readonly solution: Omit<MiddlesPuzzle['solution'], 'b'> };
+type BoardPuzzle = Omit<MiddlesPuzzle, 'triad' | 'solution'> & { readonly solution: Omit<MiddlesPuzzle['solution'], 'b' | 'facts'> };
 
 /** Try to build one board puzzle from a seed. Null when the attempt does not verify. */
 export function tryBuild(date: string, seed: number, rnd: () => number): BoardPuzzle | null {
@@ -288,9 +325,21 @@ export function triadOptions(kind: HarmonyKind, a: number, b: number, c: number,
   return shuffle(options, rnd);
 }
 
+/** Every other day is a find from the world; the days between are plain numbers. */
+export function findForDate(date: string): Find | null {
+  const n = middlesNumber(date);
+  if (n % 2 !== 0 || finds.length === 0) return null;
+  return finds[(n / 2 - 1) % finds.length]!;
+}
+
 /** The triad of a date. Its own random stream, so the board form stays as it was. */
 export function generateTriad(date: string): Triad & { readonly b: number } {
   const rnd = mulberry32((seedForDate(date) ^ 0x9e3779b9) >>> 0);
+  const find = findForDate(date);
+  if (find) {
+    const [a, b, c] = find.values;
+    return { kind: find.kind, a, b, c, options: triadOptions(find.kind, a, b, c, rnd), find: triadFind(find) };
+  }
   const kind = HARMONY_KINDS[Math.floor(rnd() * HARMONY_KINDS.length)]!;
   const candidates = triadCandidates(kind);
   const { a, b, c } = candidates[Math.floor(rnd() * candidates.length)]!;
@@ -305,7 +354,7 @@ export function generateMiddles(date: string, maxAttempts = 500): MiddlesPuzzle 
     const board = tryBuild(date, seed, mulberry32(seed));
     if (board) {
       const { b, ...triad } = generateTriad(date);
-      return { ...board, solution: { ...board.solution, b }, triad };
+      return { ...board, solution: { ...board.solution, b, facts: narrationFacts(triad.kind, triad.a, b, triad.c) }, triad };
     }
   }
   throw new Error(`no verifiable Middles puzzle for ${date} within ${maxAttempts} attempts`);
@@ -318,6 +367,10 @@ export function verifyMiddles(puzzle: MiddlesPuzzle): { valid: boolean; reason: 
   if (triad.options.length !== 4 || new Set(triad.options).size !== 4) return { valid: false, reason: 'triad needs four distinct offers' };
   if (!triad.options.includes(solution.b)) return { valid: false, reason: 'triad offers lack the answer' };
   if (triad.options.some((v) => v !== solution.b && harmonyKinds(triad.a, v, triad.c).includes(triad.kind))) return { valid: false, reason: 'a second offer closes the harmony' };
+  if (triad.find) {
+    const source = finds.find((f) => f.id === triad.find!.id);
+    if (!source || source.values.join() !== [triad.a, solution.b, triad.c].join()) return { valid: false, reason: 'find does not match its numbers' };
+  }
 
   const position = place(
     puzzle.pieces.map((p) => ({ id: p.id, side: p.side, shape: p.shape, value: p.value, at: p.square })),

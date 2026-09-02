@@ -4,19 +4,24 @@
  * the three numbers swing together, the chord sounds, one sentence appears.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, Share, Text, View, useWindowDimensions } from 'react-native';
+import { Linking, Pressable, ScrollView, Share, Text, View, useWindowDimensions } from 'react-native';
 import { Easing, cancelAnimation, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 import { meanOf } from '../../../engine/harmony';
 import { generateMiddles, isoDate, middlesNumber } from '../../../jobs/src/middles';
 import type { Triad } from '../../../jobs/src/middles';
-import { apiConfigured, fetchDistribution, fetchTodayPuzzle, submitAttempt } from '../api/client';
-import type { Distribution, Session } from '../api/client';
+import { apiConfigured, fetchDistribution, fetchNarration, fetchTodayPuzzle, submitAttempt } from '../api/client';
+import type { Distribution, Narration, Session } from '../api/client';
 import { Numeral, Offer, PillButton, Wave, intervalLabel, makeTriadStyles } from '../components/Triad';
+import { Tuner } from '../components/Tuner';
+import type { TunerState } from '../components/Tuner';
 import { chordFrequencies } from '../middles/chord';
 import { MAX_TRIES, feedbackFor, isFinished, recordAnswer, shareText, streakOn, triesOf } from '../middles/logic';
 import type { DayResult } from '../middles/logic';
 import type { SkillRecord } from '../middles/skill';
 import { playChord } from '../middles/sound';
+import { canTune } from '../middles/tone';
+import { judgeRelease } from '../middles/tuning';
+import type { Snap } from '../middles/tuning';
 import { store } from '../storage';
 import { texts, triadSentence } from '../texts';
 import type { Palette } from '../theme';
@@ -46,7 +51,9 @@ async function loadToday(session: Session | null): Promise<Loaded> {
       const puzzle = await fetchTodayPuzzle(session);
       if (puzzle?.triad) {
         const b = meanOf(puzzle.triad.kind, puzzle.triad.a, puzzle.triad.c);
-        if (b !== null && puzzle.triad.options.includes(b)) return { date: puzzle.date, triad: puzzle.triad, b, source: 'api' };
+        const { find, ...rest } = puzzle.triad;
+        const triad: Triad = find ? { ...rest, find } : rest;
+        if (b !== null && triad.options.includes(b)) return { date: puzzle.date, triad, b, source: 'api' };
       }
     } catch {
       // offline: the generator in the bundle takes over
@@ -81,7 +88,10 @@ export function MiddlesScreen({ session, palette, soundOn, onOpenSettings, onSki
   const [results, setResults] = useState<DayResult[]>([]);
   const [ready, setReady] = useState(false);
   const [distribution, setDistribution] = useState<Distribution | null>(null);
+  const [narration, setNarration] = useState<Narration | null>(null);
+  const [picked, setPicked] = useState<number | null>(null);
   const [shareNote, setShareNote] = useState<string | null>(null);
+  const [live, setLive] = useState<TunerState | null>(null);
   const started = useRef(Date.now());
   const submitted = useRef(false);
   const swing = useSharedValue(0);
@@ -113,12 +123,13 @@ export function MiddlesScreen({ session, palette, soundOn, onOpenSettings, onSki
       swing.value = withSequence(withTiming(1, { duration: 1800, easing: Easing.linear }), withTiming(0, { duration: 0 }));
       if (soundOn) void playChord(chordFrequencies([loaded.triad.a, loaded.b, loaded.triad.c])).catch(() => undefined);
     }
-    onSkill({ id: `daily:${loaded.date}`, t: Date.now(), mode: 'daily', level: 0, kind: loaded.triad.kind, solved: today.solved, tries: triesOf(today) });
+    onSkill({ id: `daily:${loaded.date}`, t: Date.now(), mode: 'daily', level: 0, kind: loaded.triad.kind, solved: today.solved, tries: triesOf(today), ...(today.cents === undefined ? {} : { cents: today.cents }) });
     if (loaded.source === 'api' && session && lastAnswer !== undefined) {
       const seconds = Math.round((Date.now() - started.current) / 1000);
       submitAttempt(session, loaded.date, { answer: lastAnswer, tries: triesOf(today) }, seconds)
         .then((r) => setDistribution(r.distribution))
-        .catch(() => fetchDistribution(loaded.date).then(setDistribution).catch(() => undefined));
+        .catch(() => fetchDistribution(loaded.date).then(setDistribution).catch(() => undefined))
+        .finally(() => fetchNarration(session, loaded.date).then(setNarration).catch(() => undefined));
     }
     return () => cancelAnimation(swing);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -128,6 +139,17 @@ export function MiddlesScreen({ session, palette, soundOn, onOpenSettings, onSki
     if (!loaded || finished) return;
     const solved = feedbackFor(loaded.triad, answer).kind === 'right';
     const next = recordAnswer(results, loaded.date, answer, solved);
+    setResults(next);
+    void store.write(RESULTS_KEY, next);
+  }
+
+  /** The finger is up: right within the lock, the other mean, or off by so many cents. */
+  function release(value: number, _snap: Snap | null) {
+    if (!loaded || finished) return;
+    const { triad, b } = loaded;
+    const verdict = judgeRelease(value, b, triad.kind, triad.a, triad.c);
+    const answer = verdict.kind === 'right' ? b : verdict.kind === 'otherMean' ? verdict.value : Math.round(value * 10) / 10;
+    const next = recordAnswer(results, loaded.date, answer, verdict.kind === 'right', verdict.cents);
     setResults(next);
     void store.write(RESULTS_KEY, next);
   }
@@ -153,13 +175,17 @@ export function MiddlesScreen({ session, palette, soundOn, onOpenSettings, onSki
   const tries = today ? triesOf(today) : 0;
   const sentence = finished
     ? solved
-      ? triadSentence(triad.kind, triad.a, b, triad.c, number)
+      ? (triad.find?.sentence ?? triadSentence(triad.kind, triad.a, b, triad.c, number))
       : texts.triadRevealed(b)
     : feedback?.kind === 'otherMean'
       ? texts.triadOtherMean(lastAnswer!, feedback.mean)
       : feedback?.kind === 'wrong'
-        ? texts.triadWrong(lastAnswer!)
+        ? Number.isInteger(lastAnswer)
+          ? texts.triadWrong(lastAnswer!)
+          : texts.triadOff(lastAnswer!)
         : texts.triadQuestion(triad.kind);
+  const tuning = canTune && soundOn && !finished;
+  const liveValue = live ? (live.snap ? String(live.snap.value) : live.value.toFixed(1).replace('.', ',')) : '?';
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.container} testID="middles">
@@ -188,8 +214,8 @@ export function MiddlesScreen({ session, palette, soundOn, onOpenSettings, onSki
         {finished ? (
           <Numeral value={b} styles={styles} swing={swing} rate={b / triad.a} accent={solved ? 'accent' : 'missing'} testID="middles-answer" />
         ) : (
-          <Text style={[styles.numeral, styles.numeralMissing]} testID="middles-missing">
-            ?
+          <Text style={[styles.numeral, styles.numeralMissing, live?.snap && styles.numeralAccent, live && !live.snap && styles.numeralLive]} testID="middles-missing">
+            {liveValue}
           </Text>
         )}
         <Numeral value={triad.c} styles={styles} swing={swing} rate={triad.c / triad.a} />
@@ -197,7 +223,14 @@ export function MiddlesScreen({ session, palette, soundOn, onOpenSettings, onSki
 
       <View style={styles.waves}>
         <Wave cycles={1} label={String(triad.a)} styles={styles} swing={swing} color={palette.accent} muted={palette.muted} />
-        <Wave cycles={finished ? b / triad.a : 0} label={finished ? intervalLabel(b, triad.a) : '?'} styles={styles} swing={swing} color={solved ? palette.accent : palette.missing} muted={palette.muted} />
+        <Wave
+          cycles={finished ? b / triad.a : live ? live.value / triad.a : 0}
+          label={finished ? intervalLabel(b, triad.a) : live?.snap ? intervalLabel(live.snap.value, triad.a) : '?'}
+          styles={styles}
+          swing={swing}
+          color={solved || live?.snap ? palette.accent : palette.missing}
+          muted={palette.muted}
+        />
         <Wave cycles={triad.c / triad.a} label={intervalLabel(triad.c, triad.a)} styles={styles} swing={swing} color={palette.accent} muted={palette.muted} />
       </View>
 
@@ -205,7 +238,9 @@ export function MiddlesScreen({ session, palette, soundOn, onOpenSettings, onSki
         {sentence}
       </Text>
 
-      {!finished ? (
+      {tuning ? (
+        <Tuner a={triad.a} c={triad.c} palette={palette} soundOn={soundOn} onChange={setLive} onRelease={release} testID="middles-tuner" />
+      ) : !finished ? (
         <View style={styles.offers} testID="middles-offers">
           {triad.options.map((v) => (
             <Offer key={v} label={String(v)} onPress={() => tap(v)} state={today?.answers.includes(v) ? 'wrong' : 'open'} styles={styles} testID={`offer-${v}`} />
@@ -213,6 +248,13 @@ export function MiddlesScreen({ session, palette, soundOn, onOpenSettings, onSki
         </View>
       ) : (
         <View style={styles.after}>
+          {triad.find ? (
+            <Pressable onPress={() => void Linking.openURL(triad.find!.source).catch(() => undefined)} testID="middles-find" hitSlop={8}>
+              <Text style={styles.small}>
+                {texts.findLine(triad.find.title, triad.find.where)} · <Text style={{ color: palette.accent }}>{texts.findSource}</Text>
+              </Text>
+            </Pressable>
+          ) : null}
           <PillButton label={texts.triadListen} onPress={listen} styles={styles} testID="middles-listen" />
           {distribution ? (
             <Text style={styles.small} testID="middles-distribution">
@@ -220,6 +262,31 @@ export function MiddlesScreen({ session, palette, soundOn, onOpenSettings, onSki
             </Text>
           ) : null}
           {loaded.source === 'local' ? <Text style={styles.small}>{texts.triadOffline}</Text> : null}
+          {narration ? (
+            <View style={styles.voices} testID="middles-narration">
+              <Text style={styles.voice}>
+                <Text style={styles.voiceName}>{texts.voiceMonk} </Text>
+                {narration.monk}
+              </Text>
+              <Text style={styles.voice}>
+                <Text style={styles.voiceName}>{texts.voiceAnalyst} </Text>
+                {narration.analyst}
+              </Text>
+              <Text style={[styles.small, { marginTop: 8 }]}>{picked === null ? texts.whoLiesQuestion : picked === narration.truth ? texts.whoLiesRight : texts.whoLiesWrong(narration.truth)}</Text>
+              {narration.statements.map((s, i) => (
+                <Pressable
+                  key={i}
+                  onPress={() => picked === null && setPicked(i)}
+                  disabled={picked !== null}
+                  testID={`statement-${i}`}
+                  style={[styles.statement, picked !== null && i === narration.truth && styles.statementTrue, picked === i && i !== narration.truth && styles.statementLie]}
+                >
+                  <Text style={styles.statementText}>{s}</Text>
+                </Pressable>
+              ))}
+              <Text style={styles.aiLabel}>{texts.aiLabel}</Text>
+            </View>
+          ) : null}
         </View>
       )}
 

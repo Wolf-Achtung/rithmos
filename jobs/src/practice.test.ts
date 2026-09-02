@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { harmonyKindsOfFour } from '../../engine/harmony';
-import { choosePracticeLevel, fourCandidates, generatePractice, practiceKind, practiceSeed, unlockedLevel, verifyPractice } from './practice';
+import { FIND_EVERY, choosePracticeLevel, fourCandidates, generatePractice, practiceKind, practiceSeed, unlockedLevel, verifyPractice } from './practice';
 import type { PracticeLevel } from './practice';
 
 describe('practice generator', () => {
@@ -29,6 +29,19 @@ describe('practice generator', () => {
     }
     const kinds = new Set(Array.from({ length: 60 }, (_, i) => practiceKind(generatePractice(4, practiceSeed(i)))));
     expect([...kinds].sort()).toEqual(['arithmetic', 'geometric', 'musical']);
+  });
+
+  it('every fourth puzzle of levels 1..3 is a find of that mean, and verifies', () => {
+    for (const level of [1, 2, 3] as const) {
+      const withFind = generatePractice(level, practiceSeed(FIND_EVERY - 1), FIND_EVERY - 1);
+      if (withFind.form !== 'triad') throw new Error('expected triad');
+      expect(withFind.triad.find).toBeDefined();
+      expect(withFind.triad.kind).toBe(['arithmetic', 'geometric', 'musical'][level - 1]);
+      expect(verifyPractice(withFind).valid).toBe(true);
+      const plain = generatePractice(level, practiceSeed(0), 0);
+      if (plain.form !== 'triad') throw new Error('expected triad');
+      expect(plain.triad.find).toBeUndefined();
+    }
   });
 
   it('level 5 offers six distinct numbers including both answers', () => {

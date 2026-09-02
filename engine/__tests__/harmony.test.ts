@@ -346,3 +346,18 @@ describe('reachable harmonies', () => {
     expect(rs[0]!.via[0]!.as).toBe('round');
   });
 });
+
+describe('the finds', () => {
+  it('every find verifies as exactly its stated kind, within two octaves, with unique ids', async () => {
+    const { finds } = await import('../rules/finds');
+    expect(finds.length).toBeGreaterThanOrEqual(8);
+    expect(new Set(finds.map((f) => f.id)).size).toBe(finds.length);
+    for (const f of finds) {
+      const [a, b, c] = f.values;
+      expect(harmonyKinds(a, b, c), f.id).toEqual([f.kind]);
+      expect(c, f.id).toBeLessThanOrEqual(4 * a);
+      expect(f.sentence.length, f.id).toBeGreaterThan(20);
+      expect(f.source.startsWith('https://'), f.id).toBe(true);
+    }
+  });
+});
