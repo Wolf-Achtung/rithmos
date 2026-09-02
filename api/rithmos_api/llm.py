@@ -16,27 +16,38 @@ from typing import Any, Literal, Protocol
 
 from pydantic import BaseModel, Field, ValidationError
 
-PROMPT_VERSION = 1
+PROMPT_VERSION = 2
 MODEL = os.environ.get("RITHMOS_LLM_MODEL", "claude-opus-5")
 
 KIND_NAME = {"arithmetic": "arithmetisch", "geometric": "geometrisch", "musical": "musikalisch"}
 MEAN_NAME = {"arithmetic": "arithmetische Mittel", "geometric": "geometrische Mittel", "musical": "harmonische Mittel"}
+# the patterns in plain words, as the app names them before the solve (CLAUDE.md 2)
+PATTERN_NAME = {
+    "arithmetic": "gleiche Schritte",
+    "geometric": "gleiche Faktoren",
+    "musical": "die Schritte verhalten sich wie die Außenzahlen",
+}
 
-SYSTEM = """Du formulierst für Middles, ein Zahlenrätsel nach dem mittelalterlichen Rithmomachia.
-Drei Zahlen a, b, c bilden eine Harmonie: b ist das arithmetische, geometrische oder harmonische
-(bei Boethius: musikalische) Mittel von a und c. Du bekommst die Fakten als JSON. Du erfindest
-keine Zahl und keine Zuordnung: Jede Zahl in deinem Text muss in den Fakten vorkommen, jede
-Mittelart-Zuordnung muss genau so lauten wie angegeben — auch bei den beiden Lügen, die absichtlich
-falsch sind und trotzdem überzeugend klingen sollen.
+SYSTEM = """Du formulierst für Rithmos, ein Zahlenrätsel nach dem mittelalterlichen Rithmomachia. Drei Zahlen
+a, b, c bilden ein Muster: gleiche Schritte (b − a = c − b), gleiche Faktoren (a : b = b : c) oder die
+Schritte verhalten sich wie die Außenzahlen ((b − a) : (c − b) = a : c). Du bekommst die Fakten als JSON. Du
+erfindest keine Zahl und keine Zuordnung: Jede Zahl in deinem Text muss in den Fakten vorkommen, jede
+Zuordnung muss genau so lauten wie angegeben, auch bei den beiden Lügen, die absichtlich falsch sind.
 
-Vier Texte, jeder ein einziger deutscher Satz, höchstens 200 Zeichen, kein Emoji, keine Anführungszeichen:
-- monk: die Stimme eines Mönchs um 1050, der Boethius gelesen hat. Ruhig, konkret, über Proportion und Ordnung.
-- analyst: die Stimme einer Datenanalystin heute. Nennt, wo dieses Mittel heute gebraucht wird (Durchschnitt,
-  Wachstumsrate, Durchschnittsgeschwindigkeit, F1-Score, Parallelschaltung, Blenden), mit den Zahlen des Rätsels.
-- truth: erklärt in einem Satz, warum b das genannte Mittel von a und c ist (mit der Rechnung).
-- lies: zwei Sätze im selben Ton wie truth, die die angegebenen falschen Behauptungen aufstellen,
-  je mit einer plausibel klingenden Begründung. Kein Hinweis, dass sie falsch sind.
-Die beiden Stimmen dürfen sich widersprechen; beide haben recht."""
+Sprache: einfaches, klares Deutsch, wie man es einem Freund sagt. Kurze Sätze. Richtige Umlaute (ä, ö, ü, ß).
+Keine Fachwörter außer den drei Musterwörtern oben; „arithmetisch“, „geometrisch“, „harmonisch“ höchstens
+einmal, und nur als Name hinter dem Muster. Kein Emoji, keine Anführungszeichen.
+
+Vier Texte:
+- monk: ein Mönch um 1050, der Boethius gelesen hat. Ein Satz, höchstens 140 Zeichen: was er an den drei
+  Zahlen hört oder sieht, konkret, ruhig.
+- analyst: eine Datenanalystin heute. Ein Satz, höchstens 140 Zeichen, mit einem Beispiel aus dem Alltag, in
+  dem genau dieses Muster steckt (Durchschnitt, Wachstum, hin und zurück fahren, F1-Score, Blenden), mit den
+  Zahlen des Rätsels.
+- truth: ein Satz, höchstens 120 Zeichen, warum b in die Mitte gehört, mit den Schritten oder Faktoren als
+  Zahlen. Muster: „8 gehört in die Mitte, weil sich die Schritte 2 und 4 verhalten wie 6 und 12.“
+- lies: zwei Sätze im selben Bau wie truth, die die angegebenen falschen Behauptungen aufstellen, jede mit
+  einer Begründung, die plausibel klingt und beim Nachrechnen nicht stimmt. Kein Hinweis, dass sie falsch sind."""
 
 
 class Narration(BaseModel):
@@ -119,15 +130,27 @@ def check(n: Narration, f: Facts) -> list[str]:
         for m in _NUMBER.findall(text):
             if m.replace(",", ".").rstrip("0").rstrip(".") not in allowed and m not in allowed and not _is_year(m):
                 problems.append(f"{name}: number {m} is not in the facts")
-    if str(f.b) not in n.truth or KIND_NAME[f.kind] not in n.truth.lower() and MEAN_NAME[f.kind] not in n.truth:
+    if str(f.b) not in n.truth or not _names_kind(n.truth, f.kind):
         problems.append("truth: does not name b and its kind")
     for i, lie in enumerate(f.lies):
         text = n.lies[i]
-        if str(lie["value"]) not in text or (
-            KIND_NAME[lie["kind"]] not in text.lower() and MEAN_NAME[lie["kind"]] not in text
-        ):
+        if str(lie["value"]) not in text or not _names_kind(text, lie["kind"]):
             problems.append(f"lie{i + 1}: does not state its number and kind")
     return problems
+
+
+# words that name a kind in plain language, any of which counts; the classical names count too
+KIND_WORDS = {
+    "arithmetic": ("gleiche schritte", "gleichen schritten", "gleich groß", "arithmet"),
+    "geometric": ("faktor", "geometr"),
+    "musical": ("außenzahl", "harmon", "musikal"),
+}
+
+
+def _names_kind(text: str, kind: str) -> bool:
+    """The kind may be named by its plain pattern words or by its classical name."""
+    low = text.lower()
+    return any(w in low for w in KIND_WORDS[kind])
 
 
 def facts_for(row_payload: dict[str, Any], row_solution: dict[str, Any]) -> Facts | None:
@@ -158,10 +181,12 @@ def facts_json(f: Facts) -> str:
         "a": f.a,
         "b": f.b,
         "c": f.c,
-        "mittelart_von_b": KIND_NAME[f.kind],
+        "muster_von_b": PATTERN_NAME[f.kind],
+        "name_des_musters": KIND_NAME[f.kind],
+        "schritte": [f.b - f.a, f.c - f.b],
         "verhaeltnis_a_b_c": f.ratio,
-        "truth": {"zahl": f.truth["value"], "mittelart": KIND_NAME[f.truth["kind"]]},
-        "lies": [{"zahl": lie["value"], "mittelart": KIND_NAME[lie["kind"]]} for lie in f.lies],
+        "truth": {"zahl": f.truth["value"], "muster": PATTERN_NAME[f.truth["kind"]]},
+        "lies": [{"zahl": lie["value"], "muster": PATTERN_NAME[lie["kind"]]} for lie in f.lies],
     }
     if f.find:
         payload["fundstueck"] = {"titel": f.find.get("title"), "ort": f.find.get("where")}
