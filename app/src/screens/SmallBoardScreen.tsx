@@ -4,7 +4,7 @@
  * engine checks the reason and rates the move, and the answer falls into one
  * of four fields. The opponent plays with open cards: its intent is said.
  */
-import { useEffect, useMemo, useReducer } from 'react';
+import { useEffect, useMemo, useReducer, useRef } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { pieceById, squareIndex } from '../../../engine/board';
 import { playTurn } from '../../../engine/game';
@@ -14,6 +14,8 @@ import { Board } from '../components/Board';
 import type { Highlights } from '../components/Board';
 import { PillButton, makeTriadStyles } from '../components/Triad';
 import { newSmallGame, reduceSmall, targetsOf, victorySquares } from '../game/small';
+import { small } from '../../../engine/rules/small';
+import type { RuleSet } from '../../../engine/types';
 import type { ReasonOffer } from '../game/small';
 import { texts } from '../texts';
 import { fonts, radius, spacing, type } from '../theme';
@@ -21,6 +23,13 @@ import type { Palette } from '../theme';
 
 interface Props {
   readonly palette: Palette;
+  /** the small board by default; Mebben's full board for those who want it */
+  readonly rules?: RuleSet;
+  /** the coverage step before each own move (CLAUDE.md 7): mark, then move */
+  readonly withMark?: boolean;
+  /** a scored marking, for the coverage records */
+  readonly onCoverage?: (coverage: number) => void;
+  readonly onBack?: () => void;
 }
 
 const STRENGTH = STRENGTH_PRESETS.apprentice;
@@ -46,12 +55,14 @@ function reasonLabel(r: ReasonOffer): string {
   return texts.boardReason[r.kind](r.values);
 }
 
-export function SmallBoardScreen({ palette }: Props) {
+export function SmallBoardScreen({ palette, rules = small, withMark = false, onCoverage, onBack }: Props) {
   const { width } = useWindowDimensions();
   const styles = useMemo(() => makeTriadStyles(palette, width, 6), [palette, width]);
   const own = useMemo(() => makeStyles(palette), [palette]);
-  const [state, dispatch] = useReducer(reduceSmall, 'white', newSmallGame);
-  const cellSize = Math.floor(Math.min((Math.min(width, 440) - 2 * spacing.lg - 24) / 4, 64));
+  const [state, dispatch] = useReducer(reduceSmall, undefined, () => newSmallGame('white', rules, withMark));
+  const files = state.position.rules.board.files;
+  const cellSize = Math.floor(Math.min((Math.min(width, 440) - 2 * spacing.lg - 24) / files, files > 4 ? 44 : 64));
+  const isSmall = state.position.rules.id === small.id;
 
   // the opponent plays after the screen has shown that it is thinking
   useEffect(() => {
@@ -74,6 +85,7 @@ export function SmallBoardScreen({ palette }: Props) {
       selected: sel ? squareIndex(state.position.rules, sel.square) : null,
       targets: targetsOf(state),
       harmony: state.phase === 'over' ? victorySquares(state) : undefined,
+      marked: state.phase === 'mark' ? new Set(state.marked) : undefined,
       lastMove: state.lastMove,
     };
   }, [state]);
@@ -84,6 +96,19 @@ export function SmallBoardScreen({ palette }: Props) {
     dispatch({ type: 'reason', id, strong });
   }
 
+  function confirmMark() {
+    dispatch({ type: 'confirm_mark' });
+  }
+
+  // a scored marking goes to the coverage records once
+  const lastScored = useRef<number>(0);
+  useEffect(() => {
+    if (state.phase !== 'move' || state.coverage === null || !state.withMark) return;
+    if (lastScored.current === state.turn) return;
+    lastScored.current = state.turn;
+    onCoverage?.(state.coverage);
+  }, [state.phase, state.coverage, state.turn, state.withMark, onCoverage]);
+
   const sentence =
     state.phase === 'over'
       ? state.winner === state.humanSide
@@ -91,17 +116,23 @@ export function SmallBoardScreen({ palette }: Props) {
         : texts.boardLost(state.victory?.values ?? [])
       : state.phase === 'opponent'
         ? texts.boardOpponentThinks
-        : state.phase === 'reason'
-          ? texts.boardWhy
-          : state.lastIntent
-            ? intentSentence(state.lastIntent)
-            : texts.boardYourMove;
+        : state.phase === 'mark'
+          ? texts.boardMarkQuestion
+          : state.phase === 'reason'
+            ? texts.boardWhy
+            : state.withMark && state.turn > 0 && state.coverage !== null
+              ? texts.boardMarkResult(Math.round(state.coverage * 100))
+              : state.withMark && state.reachable.length === 0 && state.phase === 'move'
+                ? texts.boardMarkNone
+                : state.lastIntent
+                  ? intentSentence(state.lastIntent)
+                  : texts.boardYourMove;
   const verdictLine = state.verdict && state.verdict !== 'none' ? texts.verdict[state.verdict] : null;
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.container} testID="board">
       <View style={styles.header}>
-        <Text style={styles.brand}>{texts.board}</Text>
+        <Text style={styles.brand}>{isSmall ? texts.board : texts.boardFull}</Text>
         <View style={styles.headerRight}>
           <Text style={styles.headerMeta} testID="board-turn">
             {texts.boardTurn(state.turn)}
@@ -124,6 +155,12 @@ export function SmallBoardScreen({ palette }: Props) {
         </Text>
       ) : null}
 
+      {state.phase === 'mark' ? (
+        <View style={styles.after}>
+          <PillButton label={texts.boardMarkContinue} onPress={confirmMark} styles={styles} testID="board-mark-continue" />
+        </View>
+      ) : null}
+
       {state.phase === 'reason' ? (
         <View style={own.reasons} testID="board-reasons">
           {state.reasons.map((r) => (
@@ -138,7 +175,10 @@ export function SmallBoardScreen({ palette }: Props) {
       ) : null}
 
       <View style={styles.footer}>
-        <Text style={styles.small}>{texts.boardMeeting}</Text>
+        <View style={styles.footerLeft}>
+          {onBack ? <PillButton label={texts.boardBack} onPress={onBack} styles={styles} testID="board-back" outline /> : null}
+          {isSmall ? <Text style={styles.small}>{texts.boardMeeting}</Text> : null}
+        </View>
         {state.phase === 'over' ? <PillButton label={texts.boardAgain} onPress={() => dispatch({ type: 'new_game', humanSide: 'white' })} styles={styles} testID="board-again" /> : null}
       </View>
     </ScrollView>
