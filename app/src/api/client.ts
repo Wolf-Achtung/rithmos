@@ -58,6 +58,27 @@ export async function listCoverage(session: Session): Promise<RemoteCoverageReco
   return r.records;
 }
 
+export interface RemoteMiddlesResult {
+  readonly id: string;
+  readonly t: string;
+  readonly mode: 'daily' | 'practice';
+  readonly level: number;
+  readonly kind: HarmonyKind;
+  readonly solved: boolean;
+  readonly tries: number;
+  readonly cents: number | null;
+  readonly device: string;
+}
+
+export async function uploadMiddlesResults(session: Session, records: readonly RemoteMiddlesResult[]): Promise<{ stored: number; total: number }> {
+  return request('/v1/middles/results', { method: 'PUT', body: { records }, token: session.token });
+}
+
+export async function listMiddlesResults(session: Session): Promise<RemoteMiddlesResult[]> {
+  const r = await request<{ records: RemoteMiddlesResult[] }>('/v1/middles/results', { token: session.token });
+  return r.records;
+}
+
 export interface PuzzlePiece {
   readonly id: string;
   readonly side: Side;

@@ -3,10 +3,12 @@
  * game and the coverage trend work without the API.
  */
 import { Platform } from 'react-native';
-import { apiConfigured, createAccount, listCoverage, uploadCoverage } from './api/client';
+import { apiConfigured, createAccount, listCoverage, listMiddlesResults, uploadCoverage, uploadMiddlesResults } from './api/client';
 import type { Session } from './api/client';
 import { mergeRecords } from './coverage';
 import type { CoverageRecord } from './coverage';
+import { mergeSkill } from './middles/skill';
+import type { SkillRecord } from './middles/skill';
 import { store } from './storage';
 
 const SESSION_KEY = 'session';
@@ -38,6 +40,22 @@ export async function syncCoverage(session: Session, local: readonly CoverageRec
   return mergeRecords(
     local,
     remote.map((r) => ({ id: r.id, t: Date.parse(r.t), coverage: r.coverage, assist: r.assist, device: r.device })),
+  );
+}
+
+/** The Middles records: push what the server lacks, pull everything, merge. */
+export async function syncSkill(session: Session, local: readonly SkillRecord[]): Promise<SkillRecord[]> {
+  const pending = local.filter((r) => !r.synced);
+  if (pending.length > 0) {
+    await uploadMiddlesResults(
+      session,
+      pending.map((r) => ({ id: r.id, t: new Date(r.t).toISOString(), mode: r.mode, level: r.level, kind: r.kind, solved: r.solved, tries: r.tries, cents: r.cents ?? null, device: Platform.OS })),
+    );
+  }
+  const remote = await listMiddlesResults(session);
+  return mergeSkill(
+    local,
+    remote.map((r) => ({ id: r.id, t: Date.parse(r.t), mode: r.mode, level: r.level, kind: r.kind, solved: r.solved, tries: r.tries, ...(r.cents === null ? {} : { cents: r.cents }) })),
   );
 }
 

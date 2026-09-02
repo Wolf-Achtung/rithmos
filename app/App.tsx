@@ -7,13 +7,14 @@ import type { ReactNode } from 'react';
 import { Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { mebben } from '../engine/rules/mebben';
 import type { Session } from './src/api/client';
+import { mergeSkill } from './src/middles/skill';
 import type { SkillRecord } from './src/middles/skill';
 import { MiddlesScreen } from './src/screens/MiddlesScreen';
 import { PracticeScreen } from './src/screens/PracticeScreen';
 import { RulesScreen } from './src/screens/RulesScreen';
 import { SkillScreen } from './src/screens/SkillScreen';
 import { store } from './src/storage';
-import { ensureSession } from './src/sync';
+import { ensureSession, syncSkill } from './src/sync';
 import { texts } from './src/texts';
 import { fonts, palettes, radius, spacing, type } from './src/theme';
 import type { Palette, ThemeName } from './src/theme';
@@ -59,7 +60,17 @@ export default function App() {
       setSkill(records);
       setSettingsReady(true);
       const s = await ensureSession();
-      if (alive) setSession(s);
+      if (!alive) return;
+      setSession(s);
+      if (s) {
+        try {
+          const merged = await syncSkill(s, records);
+          if (alive) setSkill((prev) => mergeSkill(prev, merged));
+          void store.write(SKILL_KEY, merged);
+        } catch {
+          // offline: the device copy stands
+        }
+      }
     })();
     return () => {
       alive = false;
@@ -77,6 +88,20 @@ export default function App() {
       return next;
     });
   }
+
+  // push what the server lacks, a moment after a puzzle finishes
+  useEffect(() => {
+    if (!session || !skill.some((r) => !r.synced)) return;
+    const handle = setTimeout(() => {
+      syncSkill(session, skill)
+        .then((merged) => {
+          setSkill((prev) => mergeSkill(prev, merged));
+          void store.write(SKILL_KEY, merged);
+        })
+        .catch(() => undefined);
+    }, 800);
+    return () => clearTimeout(handle);
+  }, [session, skill]);
 
   /** One record per puzzle: a repeated settlement of the same day or round changes nothing. */
   function onSkill(record: SkillRecord) {

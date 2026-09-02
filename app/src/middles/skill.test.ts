@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { HarmonyKind } from '../../../engine/harmony';
-import { hitRates, solvedAtLevel, weakestKind, weeklyHitTrend } from './skill';
+import { hitRates, mergeSkill, solvedAtLevel, weakestKind, weeklyHitTrend } from './skill';
 import type { SkillRecord } from './skill';
 
 let n = 0;
@@ -65,5 +65,20 @@ describe('hit rate per mean', () => {
     const records = [rec('arithmetic', true, undefined, 'practice', 2), rec('arithmetic', false, undefined, 'practice', 2), rec('arithmetic', true, undefined, 'daily', 0)];
     expect(solvedAtLevel(records, 2)).toBe(1);
     expect(solvedAtLevel(records, 0)).toBe(0);
+  });
+});
+
+describe('merging device and server records', () => {
+  it('unites by id, marks everything present as synced, keeps the local copy', () => {
+    const local = [rec('arithmetic', true), { ...rec('geometric', false), id: 'shared' }];
+    const remote = [{ ...rec('geometric', true), id: 'shared', t: 1 }, rec('musical', true, 5)];
+    const merged = mergeSkill(local, remote);
+    expect(merged.map((r) => r.id)).toEqual([...new Set(merged.map((r) => r.id))]);
+    expect(merged).toHaveLength(3);
+    const shared = merged.find((r) => r.id === 'shared')!;
+    expect(shared.solved).toBe(false); // local wins
+    expect(shared.synced).toBe(true);
+    expect(merged.find((r) => r.id === local[0]!.id)!.synced).toBe(false);
+    expect(merged.map((r) => r.t)).toEqual([...merged.map((r) => r.t)].sort((a, b) => a - b));
   });
 });
