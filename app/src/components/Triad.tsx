@@ -101,6 +101,7 @@ export function makeTriadStyles(p: Palette, width: number, digits: number, slots
     numeral: { fontFamily: fonts.numeralLight, fontSize: numeralSize, lineHeight: numeralSize * 1.08, letterSpacing: type.numeral.letterSpacing * (numeralSize / type.numeral.fontSize), color: p.ink, textAlign: 'center', flexShrink: 0 },
     numeralAccent: { fontFamily: fonts.numeral, color: p.accent, ...glow(p.accentGlow) },
     numeralMissing: { fontFamily: fonts.numeral, color: p.missing, ...glow(p.missingGlow) },
+    numeralLive: { fontFamily: fonts.numeralLight, fontSize: numeralSize * 0.7, lineHeight: numeralSize * 1.08 },
     waves: { marginTop: spacing.xl, gap: spacing.md },
     waveRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
     wave: { flex: 1, height: 28, flexDirection: 'row', alignItems: 'center', gap: 3 },
