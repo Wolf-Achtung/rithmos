@@ -24,7 +24,19 @@ def puzzle(day: str, seed: int = 1):
         "solution": {"pieceId": "m", "from": "b10", "to": "c10", "b": 8},
         "harmony": {"kinds": ["arithmetic"], "values": [2, 4, 6]},
         "difficulty": 1,
-        "triad": {"kind": "musical", "a": 6, "c": 12, "options": [9, 7, 8, 10]},
+        "triad": {
+            "kind": "musical",
+            "a": 6,
+            "c": 12,
+            "options": [9, 7, 8, 10],
+            "find": {
+                "id": "monochord",
+                "title": "Das Monochord",
+                "where": "Pythagoreer",
+                "sentence": "Saitenlängen 6, 8 und 12.",
+                "source": "https://example.org",
+            },
+        },
     }
 
 
@@ -53,7 +65,8 @@ def test_today_is_served_without_solution(client):
     assert body["attempted"] is False
     assert "solution" not in body and "harmony" not in body
     assert [p["id"] for p in body["pieces"]] == ["a", "c", "m", "e0"]
-    assert body["triad"] == {"kind": "musical", "a": 6, "c": 12, "options": [9, 7, 8, 10]}
+    assert body["triad"]["options"] == [9, 7, 8, 10]
+    assert body["triad"]["find"]["title"] == "Das Monochord"
     # future puzzles stay hidden
     assert client.get(f"/v1/puzzles/{TOMORROW}").status_code == 404
     assert client.get("/v1/puzzles/1999-01-01").status_code == 404

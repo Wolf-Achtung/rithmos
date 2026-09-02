@@ -11,6 +11,8 @@ import type { PieceInput } from '../../engine/board';
 import { HARMONY_KINDS, findHarmonies, harmonyKinds, meanOf } from '../../engine/harmony';
 import type { HarmonyKind } from '../../engine/harmony';
 import { reachableSquares } from '../../engine/moves';
+import { finds } from '../../engine/rules/finds';
+import type { Find } from '../../engine/rules/finds';
 import { mebben } from '../../engine/rules/mebben';
 import { solvePuzzle } from '../../engine/solver';
 import type { PieceId, Side, SimpleShape, Square } from '../../engine/types';
@@ -35,6 +37,15 @@ export interface Triad {
   readonly c: number;
   /** four offers, shuffled; exactly one is the answer */
   readonly options: readonly number[];
+  /** the real occurrence these numbers come from, when the day has one */
+  readonly find?: TriadFind;
+}
+
+/** What the player sees of a find: never the middle value before solving. */
+export type TriadFind = Pick<Find, 'id' | 'title' | 'where' | 'sentence' | 'source'>;
+
+export function triadFind(f: Find): TriadFind {
+  return { id: f.id, title: f.title, where: f.where, sentence: f.sentence, source: f.source };
 }
 
 export interface MiddlesPuzzle {
@@ -288,9 +299,21 @@ export function triadOptions(kind: HarmonyKind, a: number, b: number, c: number,
   return shuffle(options, rnd);
 }
 
+/** Every other day is a find from the world; the days between are plain numbers. */
+export function findForDate(date: string): Find | null {
+  const n = middlesNumber(date);
+  if (n % 2 !== 0 || finds.length === 0) return null;
+  return finds[(n / 2 - 1) % finds.length]!;
+}
+
 /** The triad of a date. Its own random stream, so the board form stays as it was. */
 export function generateTriad(date: string): Triad & { readonly b: number } {
   const rnd = mulberry32((seedForDate(date) ^ 0x9e3779b9) >>> 0);
+  const find = findForDate(date);
+  if (find) {
+    const [a, b, c] = find.values;
+    return { kind: find.kind, a, b, c, options: triadOptions(find.kind, a, b, c, rnd), find: triadFind(find) };
+  }
   const kind = HARMONY_KINDS[Math.floor(rnd() * HARMONY_KINDS.length)]!;
   const candidates = triadCandidates(kind);
   const { a, b, c } = candidates[Math.floor(rnd() * candidates.length)]!;
@@ -318,6 +341,10 @@ export function verifyMiddles(puzzle: MiddlesPuzzle): { valid: boolean; reason: 
   if (triad.options.length !== 4 || new Set(triad.options).size !== 4) return { valid: false, reason: 'triad needs four distinct offers' };
   if (!triad.options.includes(solution.b)) return { valid: false, reason: 'triad offers lack the answer' };
   if (triad.options.some((v) => v !== solution.b && harmonyKinds(triad.a, v, triad.c).includes(triad.kind))) return { valid: false, reason: 'a second offer closes the harmony' };
+  if (triad.find) {
+    const source = finds.find((f) => f.id === triad.find!.id);
+    if (!source || source.values.join() !== [triad.a, solution.b, triad.c].join()) return { valid: false, reason: 'find does not match its numbers' };
+  }
 
   const position = place(
     puzzle.pieces.map((p) => ({ id: p.id, side: p.side, shape: p.shape, value: p.value, at: p.square })),

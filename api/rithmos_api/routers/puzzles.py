@@ -33,6 +33,16 @@ class Solution(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+class TriadFind(BaseModel):
+    """The real occurrence the day's numbers come from (engine/rules/finds.ts)."""
+
+    id: str = Field(max_length=64)
+    title: str = Field(max_length=120)
+    where: str = Field(max_length=200)
+    sentence: str = Field(max_length=600)
+    source: str = Field(max_length=300)
+
+
 class Triad(BaseModel):
     """The board-less form (CLAUDE.md, Stufe 1): a and c stand, four offers for the middle."""
 
@@ -40,6 +50,7 @@ class Triad(BaseModel):
     a: int = Field(ge=1)
     c: int = Field(ge=1)
     options: list[int] = Field(min_length=4, max_length=4)
+    find: TriadFind | None = None
 
 
 class HarmonyInfo(BaseModel):
