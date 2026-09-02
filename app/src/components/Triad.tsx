@@ -7,6 +7,7 @@ import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import type { SharedValue } from 'react-native-reanimated';
 import { intervalOf } from '../middles/chord';
+import type { GapLine } from '../middles/logic';
 import { texts } from '../texts';
 import { fonts, radius, spacing, type } from '../theme';
 import type { Palette } from '../theme';
@@ -74,6 +75,43 @@ export function Offer({ label, onPress, state, styles, testID, wide }: { label: 
   );
 }
 
+/** The line that teaches the rule: what the middle built on each side, lit when both halves agree. */
+export function Gaps({ line, styles, testID }: { line: GapLine; styles: TriadStyles; testID?: string }) {
+  return (
+    <View style={styles.gaps} testID={testID}>
+      <Text style={[styles.gap, line.match ? styles.gapMatch : styles.gapOff]}>{line.left}</Text>
+      <Text style={[styles.gap, line.match ? styles.gapMatch : styles.gapOff]}>{line.right}</Text>
+    </View>
+  );
+}
+
+const KEYS = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '⌫', '0', 'ok'] as const;
+
+/** Digits to type the answer: input demands thinking (CLAUDE.md 2). */
+export function Keypad({ value, onChange, onEnter, enterLabel, styles, testID }: { value: string; onChange: (v: string) => void; onEnter: () => void; enterLabel: string; styles: TriadStyles; testID?: string }) {
+  function press(k: string) {
+    if (k === 'ok') return onEnter();
+    if (k === '⌫') return onChange(value.slice(0, -1));
+    if (value.length >= 3) return;
+    onChange(value === '0' ? k : value + k);
+  }
+  return (
+    <View style={styles.keypad} testID={testID}>
+      {KEYS.map((k) => (
+        <Pressable
+          key={k}
+          onPress={() => press(k)}
+          disabled={k === 'ok' && value.length === 0}
+          style={({ pressed }) => [styles.key, k === 'ok' && styles.keyEnter, k === 'ok' && value.length === 0 && styles.keyEnterOff, pressed && styles.pressed]}
+          testID={k === 'ok' ? 'key-enter' : k === '⌫' ? 'key-back' : `key-${k}`}
+        >
+          <Text style={[styles.keyText, k === 'ok' && styles.keyEnterText]}>{k === 'ok' ? enterLabel : k}</Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
 /** The one pill button of a screen. */
 export function PillButton({ label, onPress, styles, testID, outline }: { label: string; onPress: () => void; styles: TriadStyles; testID: string; outline?: boolean }) {
   return (
@@ -101,6 +139,7 @@ export function makeTriadStyles(p: Palette, width: number, digits: number, slots
     numeral: { fontFamily: fonts.numeralLight, fontSize: numeralSize, lineHeight: numeralSize * 1.08, letterSpacing: type.numeral.letterSpacing * (numeralSize / type.numeral.fontSize), color: p.ink, textAlign: 'center', flexShrink: 0 },
     numeralAccent: { fontFamily: fonts.numeral, color: p.accent, ...glow(p.accentGlow) },
     numeralMissing: { fontFamily: fonts.numeral, color: p.missing, ...glow(p.missingGlow) },
+    numeralWrong: { color: p.wrong, textShadowRadius: 0 },
     numeralLive: { fontFamily: fonts.numeralLight, fontSize: numeralSize * 0.7, lineHeight: numeralSize * 1.08 },
     waves: { marginTop: spacing.xl, gap: spacing.md },
     waveRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
@@ -108,6 +147,16 @@ export function makeTriadStyles(p: Palette, width: number, digits: number, slots
     bar: { flex: 1, height: 28, borderRadius: 2 },
     waveLabel: { fontFamily: fonts.text, fontSize: type.small.fontSize, color: p.muted, width: 104 },
     sentence: { fontFamily: fonts.text, fontSize: type.body.fontSize, lineHeight: type.body.lineHeight, color: p.inkSoft, textAlign: 'center', marginTop: spacing.xl, minHeight: type.body.lineHeight * 2 },
+    gaps: { flexDirection: 'row', justifyContent: 'center', gap: spacing.xl, marginTop: spacing.sm, minHeight: type.small.lineHeight },
+    gap: { fontFamily: fonts.numeral, fontSize: type.small.fontSize + 2, letterSpacing: 0.5 },
+    gapMatch: { color: p.accent },
+    gapOff: { color: p.wrong },
+    keypad: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.lg, alignSelf: 'center', width: '100%', maxWidth: 300 },
+    key: { flexBasis: '30%', flexGrow: 1, height: 52, borderRadius: radius.card, backgroundColor: p.surface, borderWidth: 1, borderColor: p.border, alignItems: 'center', justifyContent: 'center' },
+    keyText: { fontFamily: fonts.numeral, fontSize: 22, color: p.ink },
+    keyEnter: { backgroundColor: p.accent, borderColor: p.accent },
+    keyEnterOff: { opacity: 0.35 },
+    keyEnterText: { fontFamily: fonts.textMedium, fontSize: 15, color: p.accentInk },
     offers: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, marginTop: spacing.lg },
     offer: { flexBasis: '44%', flexGrow: 1, height: 76, borderRadius: radius.card, backgroundColor: p.surface, borderWidth: 1, borderColor: p.border, alignItems: 'center', justifyContent: 'center' },
     offerWide: { flexBasis: '100%', height: 60 },
