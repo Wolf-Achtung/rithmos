@@ -27,8 +27,19 @@ class Solution(BaseModel):
     pieceId: str
     from_: str = Field(alias="from", pattern=r"^[a-h](1[0-6]|[1-9])$")
     to: str = Field(pattern=r"^[a-h](1[0-6]|[1-9])$")
+    b: int | None = Field(default=None, ge=1)
+    """The missing middle of the triad; None for puzzles ingested before the triad existed."""
 
     model_config = {"populate_by_name": True}
+
+
+class Triad(BaseModel):
+    """The board-less form (CLAUDE.md, Stufe 1): a and c stand, four offers for the middle."""
+
+    kind: Literal["arithmetic", "geometric", "musical"]
+    a: int = Field(ge=1)
+    c: int = Field(ge=1)
+    options: list[int] = Field(min_length=4, max_length=4)
 
 
 class HarmonyInfo(BaseModel):
@@ -47,6 +58,7 @@ class PuzzleIn(BaseModel):
     solution: Solution
     harmony: HarmonyInfo
     difficulty: int = Field(ge=1, le=3)
+    triad: Triad | None = None
 
 
 class PuzzleBatch(BaseModel):
@@ -59,6 +71,7 @@ class PuzzleOut(BaseModel):
     difficulty: int
     pieces: list[PuzzlePiece]
     goal: dict[str, Any]
+    triad: Triad | None = None
     attempted: bool = False
 
 
@@ -71,7 +84,10 @@ class Move(BaseModel):
 
 
 class AttemptIn(BaseModel):
-    move: Move
+    """Either a board move or a triad answer; the missing one is skipped in the comparison."""
+
+    move: Move | None = None
+    answer: int | None = Field(default=None, ge=0)
     tries: int = Field(ge=1, le=99)
     seconds: int = Field(ge=0, le=86_400)
 
@@ -118,6 +134,7 @@ def _puzzle_out(row: dict, attempted: bool) -> PuzzleOut:
         difficulty=int(row["difficulty"]),
         pieces=payload["pieces"],
         goal=payload["goal"],
+        triad=payload.get("triad"),
         attempted=attempted,
     )
 
@@ -133,6 +150,8 @@ def upsert_puzzles(body: PuzzleBatch, request: Request) -> dict:
                 skipped += 1
                 continue
             payload = {"pieces": [x.model_dump() for x in p.pieces], "goal": p.goal, "seed": p.seed}
+            if p.triad is not None:
+                payload["triad"] = p.triad.model_dump()
             solution = {"move": p.solution.model_dump(by_alias=True), "harmony": p.harmony.model_dump()}
             conn.execute(
                 "INSERT INTO puzzles (date, side, difficulty, payload, solution) VALUES (%s, %s, %s, %s, %s) "
@@ -196,7 +215,15 @@ def attempt(day: date, body: AttemptIn, request: Request, account: Account = Dep
             raise HTTPException(status.HTTP_404_NOT_FOUND, "no puzzle for that date")
         stored = row["solution"]
         sol = stored["move"]
-        solved = body.move.pieceId == sol["pieceId"] and body.move.from_ == sol["from"] and body.move.to == sol["to"]
+        if body.move is None and body.answer is None:
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_CONTENT, "a move or an answer is required")
+        solved = True
+        if body.move is not None:
+            solved = (
+                body.move.pieceId == sol["pieceId"] and body.move.from_ == sol["from"] and body.move.to == sol["to"]
+            )
+        if body.answer is not None:
+            solved = solved and sol.get("b") is not None and body.answer == sol["b"]
         cur = conn.execute(
             "INSERT INTO attempts (account_id, puzzle_date, tries, seconds, solved) VALUES (%s, %s, %s, %s, %s) "
             "ON CONFLICT (account_id, puzzle_date) DO NOTHING",

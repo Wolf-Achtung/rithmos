@@ -21,9 +21,10 @@ def puzzle(day: str, seed: int = 1):
             {"id": "e0", "side": "black", "shape": "round", "value": 3, "square": "h16"},
         ],
         "goal": {"kind": "harmony"},
-        "solution": {"pieceId": "m", "from": "b10", "to": "c10"},
+        "solution": {"pieceId": "m", "from": "b10", "to": "c10", "b": 8},
         "harmony": {"kinds": ["arithmetic"], "values": [2, 4, 6]},
         "difficulty": 1,
+        "triad": {"kind": "musical", "a": 6, "c": 12, "options": [9, 7, 8, 10]},
     }
 
 
@@ -52,6 +53,7 @@ def test_today_is_served_without_solution(client):
     assert body["attempted"] is False
     assert "solution" not in body and "harmony" not in body
     assert [p["id"] for p in body["pieces"]] == ["a", "c", "m", "e0"]
+    assert body["triad"] == {"kind": "musical", "a": 6, "c": 12, "options": [9, 7, 8, 10]}
     # future puzzles stay hidden
     assert client.get(f"/v1/puzzles/{TOMORROW}").status_code == 404
     assert client.get("/v1/puzzles/1999-01-01").status_code == 404
@@ -75,7 +77,7 @@ def test_attempt_compares_the_move_and_returns_the_distribution(client):
         headers=guesser,
     )
     assert wrong.json()["solved"] is False
-    assert wrong.json()["solution"] == {"pieceId": "m", "from": "b10", "to": "c10"}
+    assert wrong.json()["solution"] == {"pieceId": "m", "from": "b10", "to": "c10", "b": 8}
     dist = client.get(f"/v1/puzzles/{TODAY}/distribution").json()
     assert dist == {"attempts": 2, "solved": 1, "tries": {"2": 1}}
     # one attempt per account, and the puzzle now reads as attempted for that account
@@ -112,3 +114,31 @@ def test_ingest_validates_squares(client):
     bad = puzzle(TODAY)
     bad["pieces"][0]["square"] = "z99"
     assert client.post("/v1/admin/puzzles", json={"puzzles": [bad]}, headers=JOBS).status_code == 422
+
+
+def test_attempt_by_answer_compares_the_triad(client):
+    client.post("/v1/admin/puzzles", json={"puzzles": [puzzle(TODAY)]}, headers=JOBS)
+    right = client.post(
+        f"/v1/puzzles/{TODAY}/attempts", json={"answer": 8, "tries": 2, "seconds": 12}, headers=auth(client)
+    )
+    assert right.status_code == 200
+    assert right.json()["solved"] is True
+    assert right.json()["solution"]["b"] == 8
+    wrong = client.post(
+        f"/v1/puzzles/{TODAY}/attempts", json={"answer": 9, "tries": 3, "seconds": 30}, headers=auth(client)
+    )
+    assert wrong.json()["solved"] is False
+    assert wrong.json()["distribution"] == {"attempts": 2, "solved": 1, "tries": {"2": 1}}
+    empty = client.post(f"/v1/puzzles/{TODAY}/attempts", json={"tries": 1, "seconds": 1}, headers=auth(client))
+    assert empty.status_code == 422
+
+
+def test_puzzles_without_triad_still_serve_and_never_solve_by_answer(client):
+    old = puzzle(TODAY)
+    del old["triad"]
+    del old["solution"]["b"]
+    assert client.post("/v1/admin/puzzles", json={"puzzles": [old]}, headers=JOBS).json()["stored"] == 1
+    assert client.get("/v1/puzzles/today").json()["triad"] is None
+    r = client.post(f"/v1/puzzles/{TODAY}/attempts", json={"answer": 8, "tries": 1, "seconds": 1}, headers=auth(client))
+    assert r.status_code == 200
+    assert r.json()["solved"] is False
