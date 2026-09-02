@@ -64,11 +64,11 @@ Rechenlast.
 |---|---|---|
 | **0** | Engine, API, Konten, Generator, Deploy-Kette | fertig, bleibt unverändert |
 | **1** | **Das Tagesrätsel ohne Brett.** Ein Rätsel am Tag, drei Versuche, teilbares Ergebnis, Dreiklang zum Anhören, ein Satz dazu, wo dieses Mittel heute in der Welt steckt (fester Text) | gebaut |
-| **2** | Progression: erst arithmetisch, dann geometrisch, dann musikalisch, dann gemischt („welches Mittel?"), dann vier Zahlen mit zwei Mitteln. Deckung je Mittelart über Wochen | **jetzt**, auf dem Gerät gebaut |
+| **2** | Progression: erst gleiche Schritte, dann gleiche Faktoren, dann Schritte wie die Außenzahlen, dann „welches Muster?", dann vier Zahlen mit zwei Mitteln. Deckung je Mittelart über Wochen. **Andere Sinne** (September 2026): in der Übung wird die Mitte wahlweise getippt (Zahl), als Länge gezogen (drei Balken, keine Zahl auf dem Schirm, das Auge entscheidet, ± 6 %) oder nach Gehör gestimmt (Ton). Rhythmus bewusst nicht: als Tippen sind nur gleiche Schritte hörbar | gebaut, auf dem Gerät |
 | **3** | Die Erzählerin: nach dem Lösen zwei Stimmen (Mönch, Analystin) und „Wer lügt?“ mit drei Erklärungen, eine stimmt. Der Generator liefert Wahrheit und Lügen als Fakten, das Modell formuliert, der Server prüft jede Zahl. Cachebar pro Rätsel, Tageslimit, AI-Act-Kennzeichnung | gebaut, Schlüssel auf Railway offen |
 | **4** | Das kleine Brett: 4 × 8, vier Steine je Seite (Weiß 2 · 4 · 6 · 8, Schwarz 3 · 6 · 9 · 12), nur die Begegnung, Sieg = eine Harmonie im gegnerischen Feld. Begründung vor dem Zug aus Engine-Angeboten, vier Felder, Gegner mit offenen Karten (fester Text). Sofort offen, ohne Stufensperre | gebaut; Freitext-Begründung über das Modell offen |
 | **5** | Das volle Brett nach Mebben hinter einer Wahl „Welches Brett?“, offen ab der fünften Übungsstufe, mit Markierungsschritt vor jedem eigenen Zug (Deckung auf dem Brett, `PUT /v1/coverage`, auf der Deckungsseite unter „Auf dem Brett“). Regelchat im Regelblatt: `POST /v1/rules/ask`, die Regelfassung als einziger Kontext, jede Zahl geprüft, „steht nicht in der Regelfassung“ als fester Satz, Antwort je Frage gecacht, drei Fragen pro Konto und Tag (Kontingent, Stufe 6) | gebaut; auf dem Web nicht mit laufendem Modell durchgespielt |
-| **6** | **Kontingente statt Bezahlschranke** (Entscheidung September 2026, Testphase): alles ist offen, die Funktionen mit Modellkosten sind pro Konto und Tag gezählt — eine Jagd, drei Regelfragen (`api/rithmos_api/quota.py`, `GET /v1/quota`). Heute, Kette, Üben, Deckung, Erzählerin und beide Bretter ohne Limit (das Übungslimit von fünf am Tag wurde nach einem Tag zurückgenommen: es sperrte Tester vom Brett aus). Das Abo (Anbieter, Konto-Bindung) kommt nach der Testphase und hebt die Limits; **Wolf-Ping vorher** | Kontingente gebaut; Abo verschoben |
+| **6** | **Kontingente statt Bezahlschranke** (Entscheidung September 2026, Testphase): alles ist offen, die Funktionen mit Modellkosten sind pro Konto und Tag gezählt — eine Jagd, drei Regelfragen, eine Erklärung (`api/rithmos_api/quota.py`, `GET /v1/quota`). Heute, Kette, Üben, Deckung, Erzählerin und beide Bretter ohne Limit (das Übungslimit von fünf am Tag wurde nach einem Tag zurückgenommen: es sperrte Tester vom Brett aus). Das Abo (Anbieter, Konto-Bindung) kommt nach der Testphase und hebt die Limits; **Wolf-Ping vorher** | Kontingente gebaut; Abo verschoben |
 
 Die vorhandene Brett-Oberfläche aus der ersten Fassung (`app/src/screens/GameScreen`,
 `Board`, `SetupScreen`) bleibt im Repo, verschwindet aber aus der Navigation, bis
@@ -113,8 +113,11 @@ Stufe 4 sie in vereinfachter Form zurückholt.
   (`react-native-audio-api`) — Wolf-Ping, bis dahin nur der Ziffernblock.
 
 - **Fundstück des Tages.** Jeder zweite Tag ist ein echtes Vorkommen aus
-  `engine/rules/finds.ts` (Monochord, Villa Emo, Blendenreihe, F1-Score, …): die
-  Zahlen des Fundstücks, nach dem Lösen sein Satz, Ort und Quelle. Ein Test lässt
+  `engine/rules/finds.ts` (Monochord, Villa Emo, Blendenreihe, F1-Score, …): Titel
+  und Ort stehen schon vor dem Lösen über den Zahlen (der Tag beginnt mit dem
+  Ding), nach dem Lösen sein Satz und die Quelle. Jedes gelöste Fundstück wird
+  eine Karte in der **Sammlung** auf der Deckungsseite, gezählt gegen die Tabelle
+  (`app/src/middles/collection.ts`, nur auf dem Gerät). Ein Test lässt
   jedes Fundstück durch die Erkennung; was nicht verifiziert, kommt nicht ins
   Produkt. Die Übung nimmt an jedem vierten Rätsel der Stufen 1–3 ein Fundstück
   ihrer Mittelart.
@@ -124,6 +127,15 @@ Stufe 4 sie in vereinfachter Form zurückholt.
   folgende eine Harmonie bilden (2 · 4 · 6 · 9 · 12 · 16 · 24 · 48). Die längste
   Kette kennt die Suche (`jobs/src/chain.ts`); Ergebnis ist die erreichte Länge,
   teilbar als `Kette Nº 47 · 6/7`. Auf dem Gerät erzeugt, kein Server.
+
+- **„Erklär es mir“** (Abschnitt 6 auf dem Tagesrätsel, September 2026). Nach dem
+  Tag ein Satz in eigenen Worten, warum die Zahl die Mitte ist. Das Modell
+  übersetzt den Satz nur in eines von vier Mustern (Schritte, Faktoren,
+  Verhältnis, unklar; `Claim` in `llm.py`), der Server vergleicht mit der
+  Mittelart und dem Ergebnis des Tages und antwortet mit einem der vier Felder
+  als festem Text (`POST /v1/puzzles/{day}/explain`, eine Erklärung pro Konto und
+  Tag, Tabelle `explanations`). Das Modell urteilt nie. Die Formulierungen der
+  vier Felder sind vorläufig, Wolf-Ping.
 
 - **Harmonie-Jagd.** Ein Foto von etwas Zählbarem; der Spieler tippt zuerst, ob
   darin eine Harmonie steckt; dann zählt das Bildmodell nur (Namen und Anzahlen,
