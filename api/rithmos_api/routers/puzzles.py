@@ -76,6 +76,9 @@ class PuzzleIn(BaseModel):
 
 class PuzzleBatch(BaseModel):
     puzzles: list[PuzzleIn] = Field(min_length=1, max_length=400)
+    # Overwrite days that already have attempts too. The generator is deterministic per date,
+    # so this only adds what newer generators ship (find, facts); the triad stays the same.
+    replace: bool = False
 
 
 class PuzzleOut(BaseModel):
@@ -159,7 +162,7 @@ def upsert_puzzles(body: PuzzleBatch, request: Request) -> dict:
     with request.app.state.pool.connection() as conn:
         for p in body.puzzles:
             has_attempts = conn.execute("SELECT 1 FROM attempts WHERE puzzle_date = %s LIMIT 1", (p.date,)).fetchone()
-            if has_attempts:
+            if has_attempts and not body.replace:
                 skipped += 1
                 continue
             payload = {"pieces": [x.model_dump() for x in p.pieces], "goal": p.goal, "seed": p.seed}

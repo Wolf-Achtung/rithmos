@@ -2,7 +2,10 @@
  * Nightly job: generate the Middles puzzles for the coming days and hand
  * them to the API. Usage (after `npm run jobs:build`):
  *
- *   node jobs/dist/generate.js [--days 7] [--from 2026-09-01] [--out puzzles.json]
+ *   node jobs/dist/generate.js [--days 7] [--from 2026-09-01] [--out puzzles.json] [--replace]
+ *
+ * --replace overwrites days that already have attempts (the generator is deterministic,
+ * so this only adds what a newer generator ships, such as finds and narration facts).
  *
  * With RITHMOS_API_URL and RITHMOS_JOBS_TOKEN set, the puzzles are posted to
  * POST {RITHMOS_API_URL}/v1/admin/puzzles. Without them, they are written to
@@ -34,7 +37,7 @@ async function main(): Promise<void> {
     const res = await fetch(`${apiUrl.replace(/\/$/, '')}/v1/admin/puzzles`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-jobs-token': token },
-      body: JSON.stringify({ puzzles }),
+      body: JSON.stringify({ puzzles, replace: process.argv.includes('--replace') }),
     });
     if (!res.ok) throw new Error(`API answered ${res.status}: ${await res.text()}`);
     console.log(`posted ${puzzles.length} puzzles (${puzzles[0]!.date} .. ${puzzles[puzzles.length - 1]!.date})`);
