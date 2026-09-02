@@ -8,7 +8,8 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .db import make_pool
-from .routers import accounts, coverage, health, middles, puzzles
+from .llm import provider_from_env
+from .routers import accounts, coverage, health, middles, narration, puzzles
 from .settings import Settings
 
 
@@ -25,6 +26,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     app = FastAPI(title="Rithmos API", version="0.1.0", lifespan=lifespan)
     app.state.settings = settings
+    app.state.llm = provider_from_env()
     if settings.cors_origins:
         app.add_middleware(
             CORSMiddleware,
@@ -37,6 +39,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(coverage.router)
     app.include_router(puzzles.router)
     app.include_router(middles.router)
+    app.include_router(narration.router)
     return app
 
 

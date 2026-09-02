@@ -28,6 +28,8 @@ class Solution(BaseModel):
     from_: str = Field(alias="from", pattern=r"^[a-h](1[0-6]|[1-9])$")
     to: str = Field(pattern=r"^[a-h](1[0-6]|[1-9])$")
     b: int | None = Field(default=None, ge=1)
+    # Narration facts from the generator (jobs/src/middles.ts, NarrationFacts); server-side only.
+    facts: dict[str, Any] | None = Field(default=None, exclude=True)
     """The missing middle of the triad; None for puzzles ingested before the triad existed."""
 
     model_config = {"populate_by_name": True}
@@ -163,7 +165,8 @@ def upsert_puzzles(body: PuzzleBatch, request: Request) -> dict:
             payload = {"pieces": [x.model_dump() for x in p.pieces], "goal": p.goal, "seed": p.seed}
             if p.triad is not None:
                 payload["triad"] = p.triad.model_dump()
-            solution = {"move": p.solution.model_dump(by_alias=True), "harmony": p.harmony.model_dump()}
+            move = p.solution.model_dump(by_alias=True, exclude={"facts"})
+            solution = {"move": move, "harmony": p.harmony.model_dump(), "facts": p.solution.facts}
             conn.execute(
                 "INSERT INTO puzzles (date, side, difficulty, payload, solution) VALUES (%s, %s, %s, %s, %s) "
                 "ON CONFLICT (date) DO UPDATE SET side = EXCLUDED.side, difficulty = EXCLUDED.difficulty, "
@@ -247,7 +250,7 @@ def attempt(day: date, body: AttemptIn, request: Request, account: Account = Dep
         dist = _distribution(conn, day)
     return AttemptOut(
         solved=solved,
-        solution=Solution.model_validate(sol),
+        solution=Solution.model_validate({k: v for k, v in sol.items() if k != "facts"}),
         harmony=HarmonyInfo.model_validate(stored["harmony"]),
         distribution=dist,
     )
