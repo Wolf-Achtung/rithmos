@@ -15,6 +15,7 @@ import type { Turn, TurnResult } from './game';
 import { harmonyKey, reachableHarmonies, victoryOf } from './harmony';
 import type { Arrangement, Harmony, HarmonyKind, ReachableHarmony } from './harmony';
 import { legalMoves } from './moves';
+import type { Move } from './moves';
 import type { PieceId, Position, Side, VictoryClass } from './types';
 
 export interface SearchOptions {
@@ -220,4 +221,30 @@ export function deriveIntent(pos: Position, turn: Turn): Intent {
   }
 
   return { kind: 'develop', piece: turn.move.pieceId, intoEnemyHalf: isEnemyHalf(pos.rules, side, turn.move.to) };
+}
+
+// ---------------------------------------------------------------------------
+// Rating a move (CLAUDE.md 6): is the player's move strong? Compared with
+// the engine's own best at the same depth; the reason is checked elsewhere.
+
+export interface MoveRating {
+  /** the player's move, searched to the same depth as the engine's best */
+  readonly score: number;
+  readonly bestScore: number;
+  readonly strong: boolean;
+}
+
+/** Strong: within the margin of the engine's best, or a win. */
+export function rateMove(pos: Position, move: Move, opts: SearchOptions = STRENGTH_PRESETS.apprentice, margin = 0.25): MoveRating {
+  const ctx: Ctx = { opts, rnd: mulberry32(opts.seed ?? 1), nodes: 0 };
+  const depth = Math.max(1, opts.depth);
+  const best = negamax(pos, depth, -Infinity, Infinity, 0, ctx).score;
+  const turn = autoTurn(pos, move);
+  const result = playTurn(pos, turn);
+  let score: number;
+  if (result.winner === pos.sideToMove) score = WIN_SCORE;
+  else if (depth <= 1) score = evaluate(result.position, pos.sideToMove);
+  else score = -negamax(result.position, depth - 1, -Infinity, Infinity, 1, ctx).score;
+  const strong = score >= WIN_SCORE / 2 || score >= best - Math.abs(best) * margin - 10;
+  return { score, bestScore: best, strong };
 }

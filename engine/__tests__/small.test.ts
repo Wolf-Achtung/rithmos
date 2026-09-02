@@ -77,3 +77,27 @@ describe('the small board', () => {
     expect(Date.now() - t0).toBeLessThan(2000);
   });
 });
+
+describe('rating a move on the small board', () => {
+  it('calls the winning move strong and a pointless one weaker than the best', async () => {
+    const { rateMove } = await import('../search');
+    const pos = place(
+      [
+        { id: 'w2', side: 'white', shape: 'round', value: 2, at: 'a6' },
+        { id: 'w4', side: 'white', shape: 'round', value: 4, at: 'b6' },
+        { id: 'w6', side: 'white', shape: 'triangle', value: 6, at: 'a4' },
+        { id: 'w8', side: 'white', shape: 'square', value: 8, at: 'd1' },
+        { id: 'b12', side: 'black', shape: 'square', value: 12, at: 'a8' },
+        { id: 'b3', side: 'black', shape: 'round', value: 3, at: 'd8' },
+      ],
+      'white',
+      small,
+    );
+    const win = legalMoves(pos).find((m) => m.pieceId === 'w6' && m.to.file === 2 && m.to.rank === 5)!;
+    const idle = legalMoves(pos).find((m) => m.pieceId === 'w8')!;
+    expect(rateMove(pos, win, STRENGTH_PRESETS.apprentice).strong).toBe(true);
+    const r = rateMove(pos, idle, STRENGTH_PRESETS.apprentice);
+    expect(r.score).toBeLessThan(r.bestScore);
+    expect(r.strong).toBe(false);
+  });
+});
