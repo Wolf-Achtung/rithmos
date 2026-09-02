@@ -22,6 +22,8 @@ export interface SkillRecord {
   readonly cents?: number;
   /** the sense the answer came through (CLAUDE.md 2, andere Sinne); absent when typed. Device only. */
   readonly sense?: 'length' | 'tone';
+  /** the find the puzzle came from, for the collection. Device only. */
+  readonly find?: string;
   /** true once the server has the record */
   readonly synced?: boolean;
 }

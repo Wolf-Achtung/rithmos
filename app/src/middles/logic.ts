@@ -32,6 +32,8 @@ export interface DayResult {
   readonly answers: readonly number[];
   /** deviation of the last released tone from the mean, in cents; absent when tapped */
   readonly cents?: number;
+  /** the find of that day, for the collection */
+  readonly find?: string;
 }
 
 export function triesOf(result: Pick<DayResult, 'answers'>): number {
@@ -67,11 +69,11 @@ export function shareText(date: string, result: Pick<DayResult, 'solved' | 'answ
 }
 
 /** Update the day's stored results with one more answer. */
-export function recordAnswer(results: readonly DayResult[], date: string, answer: number, solved: boolean, cents?: number): DayResult[] {
+export function recordAnswer(results: readonly DayResult[], date: string, answer: number, solved: boolean, cents?: number, find?: string): DayResult[] {
   const rest = results.filter((r) => r.date !== date);
   const current = results.find((r) => r.date === date);
   const answers = [...(current?.answers ?? []), answer];
-  const next: DayResult = cents === undefined ? { date, solved, answers } : { date, solved, answers, cents };
+  const next: DayResult = { date, solved, answers, ...(cents === undefined ? {} : { cents }), ...(find ? { find } : {}) };
   return [...rest, next].sort((x, y) => (x.date < y.date ? -1 : 1));
 }
 
