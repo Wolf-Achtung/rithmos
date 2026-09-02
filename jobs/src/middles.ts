@@ -48,13 +48,39 @@ export function triadFind(f: Find): TriadFind {
   return { id: f.id, title: f.title, where: f.where, sentence: f.sentence, source: f.source };
 }
 
+/**
+ * Facts for the narrator (CLAUDE.md 8.1, Stufe 3): the engine states what is
+ * true and builds the lies; the language model only phrases them. Stored with
+ * the solution, never served before the puzzle is finished.
+ */
+export interface NarrationFacts {
+  readonly truth: { readonly kind: HarmonyKind; readonly value: number };
+  /** two statements that sound right and are wrong: the other mean's value, the wrong kind */
+  readonly lies: readonly [{ readonly kind: HarmonyKind; readonly value: number }, { readonly kind: HarmonyKind; readonly value: number }];
+  /** the ratio a : b : c reduced, for the monk's ear */
+  readonly ratio: readonly [number, number, number];
+}
+
+export function narrationFacts(kind: HarmonyKind, a: number, b: number, c: number): NarrationFacts {
+  const others = HARMONY_KINDS.filter((k) => k !== kind);
+  const otherValue = others.map((k) => meanOf(k, a, c)).find((v): v is number => v !== null && v !== b);
+  const lieValue = { kind, value: otherValue ?? (b + 1 < c ? b + 1 : b - 1) };
+  const lieKind = { kind: others[0]!, value: b };
+  const g = gcd(gcd(a, b), c);
+  return { truth: { kind, value: b }, lies: [lieValue, lieKind], ratio: [a / g, b / g, c / g] };
+}
+
+function gcd(x: number, y: number): number {
+  return y === 0 ? x : gcd(y, x % y);
+}
+
 export interface MiddlesPuzzle {
   readonly date: string;
   readonly seed: number;
   readonly side: Side;
   readonly pieces: readonly PuzzlePiece[];
   readonly goal: { readonly kind: 'harmony' };
-  readonly solution: { readonly pieceId: PieceId; readonly from: string; readonly to: string; readonly b: number };
+  readonly solution: { readonly pieceId: PieceId; readonly from: string; readonly to: string; readonly b: number; readonly facts: NarrationFacts };
   readonly harmony: { readonly kinds: readonly HarmonyKind[]; readonly values: readonly number[] };
   /** 1 easy .. 3 hard, for the board form */
   readonly difficulty: 1 | 2 | 3;
@@ -172,7 +198,7 @@ function randomSquare(rnd: () => number, taken: Set<string>, pred: (sq: Square) 
 }
 
 /** The board form alone, before the triad is attached. */
-type BoardPuzzle = Omit<MiddlesPuzzle, 'triad' | 'solution'> & { readonly solution: Omit<MiddlesPuzzle['solution'], 'b'> };
+type BoardPuzzle = Omit<MiddlesPuzzle, 'triad' | 'solution'> & { readonly solution: Omit<MiddlesPuzzle['solution'], 'b' | 'facts'> };
 
 /** Try to build one board puzzle from a seed. Null when the attempt does not verify. */
 export function tryBuild(date: string, seed: number, rnd: () => number): BoardPuzzle | null {
@@ -328,7 +354,7 @@ export function generateMiddles(date: string, maxAttempts = 500): MiddlesPuzzle 
     const board = tryBuild(date, seed, mulberry32(seed));
     if (board) {
       const { b, ...triad } = generateTriad(date);
-      return { ...board, solution: { ...board.solution, b }, triad };
+      return { ...board, solution: { ...board.solution, b, facts: narrationFacts(triad.kind, triad.a, b, triad.c) }, triad };
     }
   }
   throw new Error(`no verifiable Middles puzzle for ${date} within ${maxAttempts} attempts`);
