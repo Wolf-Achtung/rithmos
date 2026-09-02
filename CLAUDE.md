@@ -64,8 +64,8 @@ Rechenlast.
 | **1** | **Middles ohne Brett.** Ein Rätsel am Tag, drei Versuche, teilbares Ergebnis, Dreiklang zum Anhören, ein Satz dazu, wo dieses Mittel heute in der Welt steckt (fester Text) | gebaut |
 | **2** | Progression: erst arithmetisch, dann geometrisch, dann musikalisch, dann gemischt („welches Mittel?"), dann vier Zahlen mit zwei Mitteln. Deckung je Mittelart über Wochen | **jetzt**, auf dem Gerät gebaut |
 | **3** | Die Erzählerin: nach dem Lösen zwei Stimmen (Mönch, Analystin) und „Wer lügt?“ mit drei Erklärungen, eine stimmt. Der Generator liefert Wahrheit und Lügen als Fakten, das Modell formuliert, der Server prüft jede Zahl. Cachebar pro Rätsel, Tageslimit, AI-Act-Kennzeichnung | gebaut, Schlüssel auf Railway offen |
-| **4** | Das kleine Brett: 4 × 8, vier Steine je Seite (Weiß 2 · 4 · 6 · 8, Schwarz 3 · 6 · 9 · 12), nur die Begegnung, Sieg = eine Harmonie im gegnerischen Feld. Begründung vor dem Zug aus Engine-Angeboten, vier Felder, Gegner mit offenen Karten (fester Text). Öffnet sich mit der fünften Übungsstufe | gebaut; Freitext-Begründung über das Modell und Deckung auf dem Brett offen |
-| **5** | Das volle Brett nach Mebben, Regelchat, Deckung auf dem Brett | für die, die es wollen |
+| **4** | Das kleine Brett: 4 × 8, vier Steine je Seite (Weiß 2 · 4 · 6 · 8, Schwarz 3 · 6 · 9 · 12), nur die Begegnung, Sieg = eine Harmonie im gegnerischen Feld. Begründung vor dem Zug aus Engine-Angeboten, vier Felder, Gegner mit offenen Karten (fester Text). Öffnet sich mit der fünften Übungsstufe | gebaut; Freitext-Begründung über das Modell offen |
+| **5** | Das volle Brett nach Mebben hinter einer Wahl „Welches Brett?“, mit Markierungsschritt vor jedem eigenen Zug (Deckung auf dem Brett, `PUT /v1/coverage`, auf der Deckungsseite unter „Auf dem Brett“). Regelchat im Regelblatt: `POST /v1/rules/ask`, die Regelfassung als einziger Kontext, jede Zahl geprüft, „steht nicht in der Regelfassung“ als fester Satz, Antwort je Frage gecacht, zwanzig Fragen pro Konto und Tag | gebaut; auf dem Web nicht mit laufendem Modell durchgespielt |
 | **6** | Abo, serverseitige Belegprüfung. **Wolf-Ping vorher** | zuletzt |
 
 Die vorhandene Brett-Oberfläche aus der ersten Fassung (`app/src/screens/GameScreen`,
@@ -361,6 +361,13 @@ verstanden hat — der Erklärer ist eine Vertrauensfrage.
 formuliert sie und entscheidet nichts.
 
 ### 8.4 Der Regelchat — Stufe 5
+
+Die Regelfassung liegt als Text im API-Dienst (`RULES_TEXT` in `llm.py`, aus
+Abschnitt 4 und den ungeprüften Punkten). Das Modell antwortet nur daraus und
+meldet, wenn die Frage dort nicht beantwortet ist; dann zeigt der Server einen
+festen Satz, nie den Modelltext. Zahlen in der Antwort müssen in der Regelfassung
+oder in der Frage stehen. Gleiche Frage, gleiche Antwort: gecacht über die
+normalisierte Frage und die Prompt-Version.
 
 ---
 
