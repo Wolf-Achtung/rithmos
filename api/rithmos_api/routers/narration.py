@@ -18,6 +18,12 @@ from ..llm import PROMPT_VERSION, facts_for, narrate
 router = APIRouter(prefix="/v1", tags=["narration"])
 log = logging.getLogger(__name__)
 
+# after this many failed phrasings of one day's narration the server stops asking the
+# model for that day: a failure costs two model calls and would otherwise repeat on
+# every page load. In memory; a restart gives the day another chance.
+GIVE_UP_AFTER = 3
+_failures: dict[tuple[str, int], int] = {}
+
 
 class NarrationOut(BaseModel):
     monk: str
@@ -62,10 +68,14 @@ def narration(day: date, request: Request, account: Account = Depends(current_ac
         ).fetchone()["n"]
         if int(used) >= request.app.state.settings.llm_daily_cap:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "narrator is done for today")
+        key = (day.isoformat(), PROMPT_VERSION)
+        if _failures.get(key, 0) >= GIVE_UP_AFTER:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "narration given up for today")
         try:
             n = narrate(provider, facts)
         except Exception as exc:  # the model is additive: any failure means the fixed text
-            log.warning("narration failed for %s: %s", day, exc)
+            _failures[key] = _failures.get(key, 0) + 1
+            log.warning("narration failed for %s (%d/%d): %s", day, _failures[key], GIVE_UP_AFTER, exc)
             raise HTTPException(status.HTTP_404_NOT_FOUND, "narration unavailable") from exc
         # a fixed shuffle per day, so every player sees the same order
         order = [0, 1, 2]
