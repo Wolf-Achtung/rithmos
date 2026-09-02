@@ -205,3 +205,21 @@ export type Quota = Record<'hunt' | 'rules', { readonly limit: number; readonly 
 export async function fetchQuota(session: Session): Promise<Quota> {
   return request<Quota>('/v1/quota', { token: session.token });
 }
+
+/** "Erklär es mir" (CLAUDE.md 6 on the daily puzzle): the player's reason, judged into one of the four fields. */
+export type ExplainVerdict = 'understood' | 'luck' | 'slip' | 'misread' | 'none';
+export interface ExplainResult {
+  readonly pattern: 'steps' | 'factors' | 'ratio' | 'unclear';
+  readonly verdict: ExplainVerdict;
+  readonly model: string;
+  readonly remaining: number;
+}
+
+export async function explainAnswer(session: Session, date: string, text: string): Promise<ExplainResult | null> {
+  try {
+    return await request<ExplainResult>(`/v1/puzzles/${date}/explain`, { method: 'POST', body: { text }, token: session.token });
+  } catch (e) {
+    if (e instanceof ApiError && (e.status === 404 || e.status === 403)) return null;
+    throw e;
+  }
+}

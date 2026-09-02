@@ -15,6 +15,7 @@ import { apiConfigured, fetchDistribution, fetchNarration, fetchTodayPuzzle, sub
 import type { Distribution, Narration, Session } from '../api/client';
 import { Gaps, Keypad, Numeral, Offer, PillButton, Wave, intervalLabel, makeTriadStyles } from '../components/Triad';
 import { Tuner } from '../components/Tuner';
+import { ExplainAsk } from './ExplainAsk';
 import type { TunerState } from '../components/Tuner';
 import { chordFrequencies } from '../middles/chord';
 import { HELP_AFTER, MAX_TRIES, feedbackFor, gapLine, isFinished, patternExample, recordAnswer, shareText, streakOn, triesOf } from '../middles/logic';
@@ -270,6 +271,7 @@ export function MiddlesScreen({ session, palette, soundOn, onOpenSettings, onSki
             </Text>
           ) : null}
           {loaded.source === 'local' ? <Text style={styles.small}>{texts.triadOffline}</Text> : null}
+          {loaded.source === 'api' && session ? <ExplainAsk session={session} date={loaded.date} palette={palette} /> : null}
           {narration ? (
             <View style={styles.voices} testID="middles-narration">
               <Text style={styles.voice}>
