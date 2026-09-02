@@ -251,3 +251,117 @@ def clean_counts(counts: HuntCounts) -> HuntCounts:
         seen_labels.add(label.lower())
         groups.append(HuntGroup(label=label, count=g.count))
     return HuntCounts(groups=groups[:8])
+
+
+# ---------------------------------------------------------------------------
+# The rules chat (CLAUDE.md 8.4): the rule set is the data, the model phrases an
+# answer from it and from nothing else. What the text does not settle, it says
+# so — the server then shows a fixed sentence, never the model's guess.
+
+RULES_VERSION = 1
+
+RULES_TEXT = """Regelfassung: Peter Mebben nach Selenus 1616 (https://jducoeur.org/game-hist/mebben.ryth.html).
+
+Brett und Steine. 8 × 16 Felder. Weiß und Schwarz haben je 24 Steine: Runde, Dreiecke, Quadrate und eine
+Pyramide. Weiße Pyramide = 91 aus 36 + 25 + 16 + 9 + 4 + 1. Schwarze Pyramide = 190 aus 64 + 49 + 36 + 25 + 16.
+
+Zugweiten. Mebben zählt Start- und Zielfeld mit; „ins zweite Feld" heißt ein Schritt.
+- Runde: ins zweite Feld, ein Schritt, gerade, nicht diagonal.
+- Dreieck: ins dritte Feld, zwei Schritte, ausschließlich diagonal.
+- Quadrat: ins vierte Feld, drei Schritte, alle Richtungen einschließlich diagonal.
+- Pyramide: zieht nach ihren Bestandteilen.
+Kein Springen: die Zwischenfelder eines Zuges müssen frei sein.
+
+Schlagarten. Der schlagende Stein bleibt stehen und betritt das Zielfeld nicht. Schläge werden nach dem
+regulären Zug erklärt, gegen die entstandene Stellung.
+- Begegnung: ein eigener Stein könnte im nächsten regulären Zug auf einen gegnerischen Stein gleichen Werts ziehen.
+- Hinterhalt: zwei oder mehr eigene Steine könnten im nächsten Zug auf das Feld eines gegnerischen Steins
+  ziehen, und ihre Summe oder Differenz ergibt dessen Wert.
+- Angriff: ein eigener Stein könnte in regulärer Richtung auf einen gegnerischen Stein treffen, und der eigene
+  Wert ergibt mal oder geteilt durch die Zahl der Felder dazwischen dessen Wert.
+- Belagerung: der gegnerische Stein kann weder ziehen noch von einem einzelnen eigenen Stein befreit werden.
+Ein Pyramidenbestandteil kann einzeln auf seinen Wert geschlagen werden.
+
+Die drei Harmonien, für drei Zahlen a, b, c in aufsteigender Reihe.
+- Arithmetisch: b − a = c − b. Beispiel 2, 4, 6. b ist das arithmetische Mittel von a und c.
+- Geometrisch: a : b = b : c. Beispiel 5, 10, 20. b ist das geometrische Mittel von a und c.
+- Musikalisch: a : c = (b − a) : (c − b). Beispiel 6, 8, 12. b ist das harmonische Mittel von a und c.
+
+Siege. Kleiner Sieg: eine Harmonie aus drei Steinen. Großer Sieg: vier Steine mit zwei, nicht mehr als zwei,
+verschiedenen Harmonien. Größter Sieg: vier Steine mit allen dreien. Lage: im gegnerischen Feld, in
+aufsteigender Reihe, im rechten Winkel oder bei vieren im Quadrat, mit gleichem Abstand zueinander. Im Winkel
+trägt der Eckstein den mittleren Wert; im Quadrat aus vieren werden die Werte sortiert gelesen.
+
+Noch nicht gegen die Quelle geprüft: die Felder der Startaufstellung; das Verbot des Springens; dass Schläge
+nach dem Zug durch beliebige eigene Steine erklärt werden; die Formen der Pyramidenbestandteile; das
+Schlagen einzelner Bestandteile; dass eine Belagerung mindestens einen belagernden Stein braucht und Rand
+oder eigene Steine allein nicht belagern; die Lesart von Winkel und Quadrat."""
+
+RULES_SYSTEM = (
+    """Du beantwortest Fragen zu den Regeln von Rithmos, einem Spiel nach dem mittelalterlichen
+Rithmomachia. Die einzige Quelle ist die folgende Regelfassung. Du beantwortest nur, was darin steht, und
+fügst nichts aus anderen Fassungen oder aus eigenem Wissen hinzu. Steht die Antwort nicht in der Regelfassung,
+setze grounded auf false und lass answer leer. Sonst grounded true und die Antwort in höchstens drei deutschen
+Sätzen, höchstens 400 Zeichen, ohne Emoji, ohne Anführungszeichen, ohne Zahlen, die nicht in der Regelfassung
+oder in der Frage vorkommen. Nenne, wenn es passt, den Punkt „noch nicht gegen die Quelle geprüft".
+
+REGELFASSUNG
+"""
+    + RULES_TEXT
+)
+
+
+class RuleAnswer(BaseModel):
+    answer: str = Field(max_length=450)
+    grounded: bool
+
+
+class RulesProvider(Protocol):
+    def answer(self, system: str, question: str) -> RuleAnswer: ...
+
+
+@dataclass
+class AnthropicRules:
+    model: str = MODEL
+
+    def answer(self, system: str, question: str) -> RuleAnswer:
+        import anthropic
+
+        client = anthropic.Anthropic()
+        response = client.messages.parse(
+            model=self.model,
+            max_tokens=800,
+            system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
+            messages=[{"role": "user", "content": question}],
+            output_format=RuleAnswer,
+        )
+        if response.stop_reason == "refusal" or response.parsed_output is None:
+            raise RuntimeError(f"no answer: stop_reason={response.stop_reason}")
+        return response.parsed_output
+
+
+def rules_from_env() -> RulesProvider | None:
+    return AnthropicRules() if os.environ.get("ANTHROPIC_API_KEY") else None
+
+
+def normalize_question(q: str) -> str:
+    """Case, whitespace and trailing punctuation do not make a new question."""
+    return re.sub(r"\s+", " ", q.strip().lower()).rstrip("?!. ")
+
+
+def check_answer(a: RuleAnswer, question: str) -> list[str]:
+    """An answer may use only numbers that the rules or the question contain, and
+    must fit on a few lines. Returns the problems, empty when clean."""
+    if not a.grounded:
+        return []
+    problems: list[str] = []
+    text = a.answer.strip()
+    if not text:
+        problems.append("answer: empty but grounded")
+    if text.count("\n") > 2:
+        problems.append("answer: too many lines")
+    allowed = set(_NUMBER.findall(RULES_TEXT)) | set(_NUMBER.findall(question))
+    for m in _NUMBER.findall(text):
+        if m not in allowed and not _is_year(m):
+            problems.append(f"answer: number {m} is not in the rules")
+    return problems
