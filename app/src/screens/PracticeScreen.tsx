@@ -4,7 +4,7 @@
  * per mean. Same picture as the daily: numerals, waves, offers.
  */
 import { useEffect, useMemo, useState } from 'react';
-import { ScrollView, Text, View, useWindowDimensions } from 'react-native';
+import { Linking, Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
 import { Easing, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 import { HARMONY_KINDS } from '../../../engine/harmony';
 import type { HarmonyKind } from '../../../engine/harmony';
@@ -52,7 +52,7 @@ function nextRound(records: readonly SkillRecord[]): Round {
   const count = records.filter((r) => r.mode === 'practice').length;
   const unlocked = unlockedLevel((level) => solvedAtLevel(records, level));
   const level = choosePracticeLevel(unlocked, weakestKind(records), count);
-  return { puzzle: generatePractice(level, practiceSeed(count)), count, taps: [], solved: false, finished: false };
+  return { puzzle: generatePractice(level, practiceSeed(count), count), count, taps: [], solved: false, finished: false };
 }
 
 function applyTap(round: Round, tap: number | HarmonyKind): Round {
@@ -161,6 +161,13 @@ export function PracticeScreen({ palette, soundOn, records, onSkill }: Props) {
         </View>
       ) : (
         <View style={styles.after}>
+          {puzzle.form === 'triad' && puzzle.triad.find ? (
+            <Pressable onPress={() => void Linking.openURL(puzzle.triad.find!.source).catch(() => undefined)} testID="practice-find" hitSlop={8}>
+              <Text style={styles.small}>
+                {texts.findLine(puzzle.triad.find.title, puzzle.triad.find.where)} · <Text style={{ color: palette.accent }}>{texts.findSource}</Text>
+              </Text>
+            </Pressable>
+          ) : null}
           <PillButton label={texts.next} onPress={next} styles={styles} testID="practice-next" />
         </View>
       )}
@@ -201,7 +208,7 @@ function sentenceFor(round: Round): string {
   const last = taps[taps.length - 1];
   if (puzzle.form === 'triad') {
     const { a, c, kind } = puzzle.triad;
-    if (finished) return solved ? triadSentence(kind, a, puzzle.b, c, round.count) : texts.triadRevealed(puzzle.b);
+    if (finished) return solved ? (puzzle.triad.find?.sentence ?? triadSentence(kind, a, puzzle.b, c, round.count)) : texts.triadRevealed(puzzle.b);
     if (typeof last !== 'number') return texts.triadQuestion(kind);
     const f = feedbackFor(puzzle.triad, last);
     return f.kind === 'otherMean' ? texts.triadOtherMean(last, f.mean) : Number.isInteger(last) ? texts.triadWrong(last) : texts.triadOff(last);

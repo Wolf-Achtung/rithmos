@@ -6,7 +6,8 @@
  */
 import { HARMONY_KINDS, harmonyKinds, harmonyKindsOfFour, meanOf } from '../../engine/harmony';
 import type { HarmonyKind } from '../../engine/harmony';
-import { TRIAD_MAX_RATIO, mulberry32, seedForDate, triadCandidates, triadOptions } from './middles';
+import { finds } from '../../engine/rules/finds';
+import { TRIAD_MAX_RATIO, mulberry32, seedForDate, triadCandidates, triadFind, triadOptions } from './middles';
 import type { Triad } from './middles';
 
 export type PracticeLevel = 1 | 2 | 3 | 4 | 5;
@@ -70,11 +71,20 @@ function fourOptions(a: number, hm: number, am: number, d: number, rnd: () => nu
   return shuffle(options, rnd);
 }
 
-/** Deterministic: the same level and seed always give the same puzzle. */
-export function generatePractice(level: PracticeLevel, seed: number): PracticePuzzle {
+/** Every fourth puzzle of levels 1..3 comes from the world: a find of that mean. */
+export const FIND_EVERY = 4;
+
+/** Deterministic: the same level and seed always give the same puzzle. `count` picks the find days. */
+export function generatePractice(level: PracticeLevel, seed: number, count = 0): PracticePuzzle {
   const rnd = mulberry32((seed ^ (level * 0x9e3779b9)) >>> 0);
   if (level === 1 || level === 2 || level === 3) {
     const kind = LEVEL_KIND[level];
+    const ofKind = finds.filter((f) => f.kind === kind);
+    if (count % FIND_EVERY === FIND_EVERY - 1 && ofKind.length > 0) {
+      const find = ofKind[Math.floor(count / FIND_EVERY) % ofKind.length]!;
+      const [a, b, c] = find.values;
+      return { level, form: 'triad', triad: { kind, a, c, options: triadOptions(kind, a, b, c, rnd), find: triadFind(find) }, b };
+    }
     const cs = triadCandidates(kind);
     const { a, b, c } = cs[Math.floor(rnd() * cs.length)]!;
     return { level, form: 'triad', triad: { kind, a, c, options: triadOptions(kind, a, b, c, rnd) }, b };
