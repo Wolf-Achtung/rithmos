@@ -2,7 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { pieceById } from '../../../engine/board';
 import { autoTurn, playTurn } from '../../../engine/game';
 import { chooseMove, deriveIntent, STRENGTH_PRESETS } from '../../../engine/search';
-import { judge, newSmallGame, reasonsFor, reduceSmall, targetsOf } from './small';
+import { actualSquares, coverageOf, judge, newSmallGame, reasonsFor, reduceSmall, targetsOf } from './small';
+import { mebben } from '../../../engine/rules/mebben';
 import type { SmallState } from './small';
 import type { Position } from '../../../engine/types';
 
@@ -76,5 +77,24 @@ describe('the small board store', () => {
     }
     expect(s.phase).toBe('over');
     expect(s.winner).not.toBeNull();
+  });
+});
+
+describe('the full board with the coverage step', () => {
+  it('marks squares before the move, scores the marking against the engine, then moves', () => {
+    let s = newSmallGame('white', mebben, true);
+    expect(s.phase).toBe('mark');
+    expect(s.position.rules.id).toBe(mebben.id);
+    const actual = actualSquares(s.position, s.reachable);
+    // toggle one square twice, then mark every actual square
+    s = reduceSmall(s, { type: 'tap', square: { file: 0, rank: 0 } });
+    s = reduceSmall(s, { type: 'tap', square: { file: 0, rank: 0 } });
+    expect(s.marked).toEqual([]);
+    for (const idx of actual) s = reduceSmall(s, { type: 'tap', square: { file: idx % 8, rank: Math.floor(idx / 8) } });
+    s = reduceSmall(s, { type: 'confirm_mark' });
+    expect(s.phase).toBe('move');
+    expect(s.coverage).toBe(actual.size === 0 ? null : 1);
+    expect(coverageOf([1, 2], new Set([2, 3, 4]))).toBeCloseTo(1 / 3);
+    expect(coverageOf([], new Set())).toBeNull();
   });
 });
