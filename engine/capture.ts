@@ -263,11 +263,13 @@ export function siegeCaptures(pos: Position, side: Side): Capture[] {
 
 /** All captures available to `side` in this position, every method. */
 export function findCaptures(pos: Position, side: Side): Capture[] {
+  const allowed = pos.rules.captureMethods;
+  const on = (m: CaptureMethod) => !allowed || allowed.includes(m);
   return [
-    ...meetingCaptures(pos, side),
-    ...ambushCaptures(pos, side),
-    ...assaultCaptures(pos, side),
-    ...siegeCaptures(pos, side),
+    ...(on('meeting') ? meetingCaptures(pos, side) : []),
+    ...(on('ambush') ? ambushCaptures(pos, side) : []),
+    ...(on('assault') ? assaultCaptures(pos, side) : []),
+    ...(on('siege') ? siegeCaptures(pos, side) : []),
   ];
 }
 

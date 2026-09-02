@@ -4,15 +4,15 @@ import { mebben } from '../rules/mebben';
 
 describe('pyramids', () => {
   it('white pyramid sums to 91 from 36+25+16+9+4+1', () => {
-    const c = mebben.setup.white.pyramid.components.map((x) => x.value);
+    const c = mebben.setup.white.pyramid!.components.map((x) => x.value);
     expect(c).toEqual([36, 25, 16, 9, 4, 1]);
-    expect(pyramidValue(mebben.setup.white.pyramid.components)).toBe(91);
+    expect(pyramidValue(mebben.setup.white.pyramid!.components)).toBe(91);
   });
 
   it('black pyramid sums to 190 from 64+49+36+25+16', () => {
-    const c = mebben.setup.black.pyramid.components.map((x) => x.value);
+    const c = mebben.setup.black.pyramid!.components.map((x) => x.value);
     expect(c).toEqual([64, 49, 36, 25, 16]);
-    expect(pyramidValue(mebben.setup.black.pyramid.components)).toBe(190);
+    expect(pyramidValue(mebben.setup.black.pyramid!.components)).toBe(190);
   });
 });
 
