@@ -233,20 +233,22 @@ export function tryBuild(date: string, seed: number, rnd: () => number): BoardPu
  * Bounds per kind. The stones of the rule set give too few musical triples
  * (two among white, none among black), so the triad draws from plain numbers.
  * Small enough to hold in the head, large enough that the answer is not read
- * off at a glance.
+ * off at a glance. c is at most four times a: the chord of the three numbers
+ * (frequencies in the ratio a : b : c) then spans at most two octaves.
  */
 const TRIAD_BOUNDS: Record<HarmonyKind, { readonly maxC: number; readonly minSpan: number }> = {
   arithmetic: { maxC: 40, minSpan: 4 },
   geometric: { maxC: 64, minSpan: 3 },
   musical: { maxC: 60, minSpan: 3 },
 };
+export const TRIAD_MAX_RATIO = 4;
 
 /** All a < b < c of a kind within its bounds, b a whole number. */
 export function triadCandidates(kind: HarmonyKind): { a: number; b: number; c: number }[] {
   const { maxC, minSpan } = TRIAD_BOUNDS[kind];
   const out: { a: number; b: number; c: number }[] = [];
   for (let a = 2; a <= maxC; a++)
-    for (let c = a + minSpan; c <= maxC; c++) {
+    for (let c = a + minSpan; c <= Math.min(maxC, a * TRIAD_MAX_RATIO); c++) {
       const b = meanOf(kind, a, c);
       if (b !== null) out.push({ a, b, c });
     }
