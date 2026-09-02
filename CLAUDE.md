@@ -64,9 +64,9 @@ Rechenlast.
 | **1** | **Middles ohne Brett.** Ein Rätsel am Tag, drei Versuche, teilbares Ergebnis, Dreiklang zum Anhören, ein Satz dazu, wo dieses Mittel heute in der Welt steckt (fester Text) | gebaut |
 | **2** | Progression: erst arithmetisch, dann geometrisch, dann musikalisch, dann gemischt („welches Mittel?"), dann vier Zahlen mit zwei Mitteln. Deckung je Mittelart über Wochen | **jetzt**, auf dem Gerät gebaut |
 | **3** | Die Erzählerin: nach dem Lösen zwei Stimmen (Mönch, Analystin) und „Wer lügt?“ mit drei Erklärungen, eine stimmt. Der Generator liefert Wahrheit und Lügen als Fakten, das Modell formuliert, der Server prüft jede Zahl. Cachebar pro Rätsel, Tageslimit, AI-Act-Kennzeichnung | gebaut, Schlüssel auf Railway offen |
-| **4** | Das kleine Brett: 4 × 8, vier Steine je Seite (Weiß 2 · 4 · 6 · 8, Schwarz 3 · 6 · 9 · 12), nur die Begegnung, Sieg = eine Harmonie im gegnerischen Feld. Begründung vor dem Zug aus Engine-Angeboten, vier Felder, Gegner mit offenen Karten (fester Text). Öffnet sich mit der fünften Übungsstufe | gebaut; Freitext-Begründung über das Modell offen |
-| **5** | Das volle Brett nach Mebben hinter einer Wahl „Welches Brett?“, mit Markierungsschritt vor jedem eigenen Zug (Deckung auf dem Brett, `PUT /v1/coverage`, auf der Deckungsseite unter „Auf dem Brett“). Regelchat im Regelblatt: `POST /v1/rules/ask`, die Regelfassung als einziger Kontext, jede Zahl geprüft, „steht nicht in der Regelfassung“ als fester Satz, Antwort je Frage gecacht, drei Fragen pro Konto und Tag (Kontingent, Stufe 6) | gebaut; auf dem Web nicht mit laufendem Modell durchgespielt |
-| **6** | **Kontingente statt Bezahlschranke** (Entscheidung September 2026, Testphase): alles ist offen, die Funktionen mit Modellkosten sind pro Konto und Tag gezählt — eine Jagd, drei Regelfragen (`api/rithmos_api/quota.py`, `GET /v1/quota`); Üben fünf Rätsel am Tag, auf dem Gerät gezählt. Heute, Kette, Deckung, Erzählerin und beide Bretter ohne Limit. Das Abo (Anbieter, Konto-Bindung) kommt nach der Testphase und hebt die Limits; **Wolf-Ping vorher** | Kontingente gebaut; Abo verschoben |
+| **4** | Das kleine Brett: 4 × 8, vier Steine je Seite (Weiß 2 · 4 · 6 · 8, Schwarz 3 · 6 · 9 · 12), nur die Begegnung, Sieg = eine Harmonie im gegnerischen Feld. Begründung vor dem Zug aus Engine-Angeboten, vier Felder, Gegner mit offenen Karten (fester Text). Sofort offen, ohne Stufensperre | gebaut; Freitext-Begründung über das Modell offen |
+| **5** | Das volle Brett nach Mebben hinter einer Wahl „Welches Brett?“, offen ab der fünften Übungsstufe, mit Markierungsschritt vor jedem eigenen Zug (Deckung auf dem Brett, `PUT /v1/coverage`, auf der Deckungsseite unter „Auf dem Brett“). Regelchat im Regelblatt: `POST /v1/rules/ask`, die Regelfassung als einziger Kontext, jede Zahl geprüft, „steht nicht in der Regelfassung“ als fester Satz, Antwort je Frage gecacht, drei Fragen pro Konto und Tag (Kontingent, Stufe 6) | gebaut; auf dem Web nicht mit laufendem Modell durchgespielt |
+| **6** | **Kontingente statt Bezahlschranke** (Entscheidung September 2026, Testphase): alles ist offen, die Funktionen mit Modellkosten sind pro Konto und Tag gezählt — eine Jagd, drei Regelfragen (`api/rithmos_api/quota.py`, `GET /v1/quota`). Heute, Kette, Üben, Deckung, Erzählerin und beide Bretter ohne Limit (das Übungslimit von fünf am Tag wurde nach einem Tag zurückgenommen: es sperrte Tester vom Brett aus). Das Abo (Anbieter, Konto-Bindung) kommt nach der Testphase und hebt die Limits; **Wolf-Ping vorher** | Kontingente gebaut; Abo verschoben |
 
 Die vorhandene Brett-Oberfläche aus der ersten Fassung (`app/src/screens/GameScreen`,
 `Board`, `SetupScreen`) bleibt im Repo, verschwindet aber aus der Navigation, bis
@@ -74,8 +74,15 @@ Stufe 4 sie in vereinfachter Form zurückholt.
 
 ### Middles, Stufe 1, genau
 
-- Ein Bildschirm. Drei große Felder, zwei Zahlen stehen, die dritte fehlt. Vier
-  Angebote zum Antippen. Keine Koordinaten, keine Steine, keine Zugregeln.
+- Ein Bildschirm. Drei große Felder, zwei Zahlen stehen, die dritte fehlt. Die
+  Frage lautet „Welche Zahl gehört in die Mitte, nach dem Muster von 2 · 4 · 6?“:
+  das Beispiel ist ein anderes Tripel derselben Mittelart, nie der Name. Die
+  Antwort wird auf einem Ziffernblock getippt. Keine Koordinaten, keine Steine,
+  keine Zugregeln.
+- Nach jedem Tipp zeigt eine Zeile unter den Zahlen, was der Tipp gebaut hat:
+  `+3 · +12` bei gleichen Schritten, `×2 · ×2` bei gleichen Faktoren, `Schritte
+  1 : 4 · außen 1 : 4` beim musikalischen Mittel; stimmen beide Hälften überein,
+  leuchtet die Zeile. Das ist die Rückmeldung, die die Regel lehrt.
 - Drei Versuche. Nach dem dritten Fehlversuch wird aufgelöst.
 - Richtig: die drei Zahlen schwingen zusammen, der Dreiklang erklingt, ein Satz
   erscheint. Ein Satz, nicht drei.
@@ -84,21 +91,22 @@ Stufe 4 sie in vereinfachter Form zurückholt.
 - Verteilung nach dem Lösen wie bisher, über die API.
 - Ohne Server läuft alles lokal, wie bisher. Die Rätsel kommen dann aus
   `jobs/src/middles.ts` im Bundle.
-- Die vier Angebote enthalten immer die beiden anderen Mittel als Ablenker,
-  wenn sie ganzzahlig sind. Wer 9 statt 8 tippt, hat arithmetisch gedacht — das
-  ist die Rückmeldung wert.
+- Für den dritten Versuch erscheinen vier Angebote; sie enthalten die beiden
+  anderen Mittel als Ablenker, wenn sie ganzzahlig sind. Wer 9 statt 8 tippt, hat
+  in gleichen Schritten gedacht — das sagt die Rückmeldung, ohne Fachwort.
 - Die Zahlen kommen nicht aus den Steinen der Regelfassung, sondern aus allen
   ganzzahligen Tripeln bis 64 mit c höchstens 4·a. Grund: die Steine Mebbens
   ergeben nur zwei musikalische Tripel für Weiß und keins für Schwarz. Die
   Brettform desselben Tages bleibt im Datensatz für Stufe 4.
 - Der Dreiklang klingt in den Verhältnissen der drei Zahlen selbst, a : b : c über
   einem freien Grundton. Durch c ≤ 4·a bleibt er innerhalb von zwei Oktaven.
-- **Stimmen statt Tippen.** Wo ein Dauerton möglich ist (Web Audio) und der Klang an
-  ist, gibt es keine Angebote: Der Spieler zieht den fehlenden Ton zwischen die
-  beiden gegebenen, ganzzahlige Mittel rasten ein, Loslassen ist die Antwort
-  (± 25 Cent). Die Abweichung in Cent wird mit dem Ergebnis gespeichert. Stumm oder
-  ohne Dauerton bleiben die vier Angebote. Auf iOS und Android braucht der Dauerton
-  eine weitere Abhängigkeit (`react-native-audio-api`) — Wolf-Ping, bis dahin Angebote.
+- **Stimmen nach Gehör.** Wo ein Dauerton möglich ist (Web Audio) und der Klang an
+  ist, liegt unter dem Ziffernblock eine Tonspur: Der Spieler zieht den fehlenden
+  Ton zwischen die beiden gegebenen und hört ihn; nichts rastet ein, nichts
+  färbt sich, keine Zahl erscheint, das Ohr entscheidet. Loslassen ist die Antwort
+  (± 25 Cent), die Abweichung in Cent wird mit dem Ergebnis gespeichert. Auf iOS
+  und Android braucht der Dauerton eine weitere Abhängigkeit
+  (`react-native-audio-api`) — Wolf-Ping, bis dahin nur der Ziffernblock.
 
 - **Fundstück des Tages.** Jeder zweite Tag ist ein echtes Vorkommen aus
   `engine/rules/finds.ts` (Monochord, Villa Emo, Blendenreihe, F1-Score, …): die
@@ -123,10 +131,12 @@ Stufe 4 sie in vereinfachter Form zurückholt.
 
 - Das Tagesrätsel bleibt für alle gleich. Die Progression ist ein zweiter Bereich
   „Üben": unbegrenzt viele Rätsel, auf dem Gerät erzeugt und geprüft, kein Server.
-- Fünf Stufen: arithmetisch, geometrisch, musikalisch, „welches Mittel?" (drei
-  Zahlen stehen, die Mittelart wird getippt, zwei Versuche), vier Zahlen (a und d
-  stehen, harmonisches und arithmetisches Mittel fehlen, sechs Angebote, zwei
-  Tipps — die Tetraktys 6 : 8 : 9 : 12).
+- Fünf Stufen: gleiche Schritte, gleiche Faktoren, Schritte wie die Außenzahlen
+  (arithmetisch, geometrisch, musikalisch, mit Ziffernblock und Rückmeldezeile wie
+  das Tagesrätsel), „welches Muster?" (drei Zahlen stehen, das Muster wird aus
+  drei Beispielen getippt, zwei Versuche), vier Zahlen (a und d stehen,
+  harmonisches und arithmetisches Mittel fehlen, sechs Angebote, zwei Tipps — die
+  Tetraktys 6 : 8 : 9 : 12).
 - Eine Stufe öffnet sich nach fünf gelösten Rätseln der vorigen. Jedes dritte
   Rätsel nimmt die Mittelart dran, die in der Trefferquote hinterherhinkt.
 - Die Trefferquote je Mittelart (Abschnitt 7) speist sich aus Tagesrätsel und
@@ -141,9 +151,23 @@ Schrift, die dort nicht steht.
 
 Grundsätze, unabhängig von der Richtung:
 
+- **Die Rückmeldung lehrt die Regel.** Das Spiel prüft eine Regel, die der
+  Spieler nicht kennt; also muss jede Rückmeldung zeigen, was er gebaut hat
+  (Schritte, Faktoren, Verhältnisse), und der Name der Regel kommt erst nach dem
+  Lösen. Kein Fachwort vor dem Lösen: die drei Mittel heißen bis dahin „gleiche
+  Schritte“, „gleiche Faktoren“ und „Schritte wie die Außenzahlen“, und jede
+  Aufgabe nennt ein Beispiel desselben Musters statt eines Namens. Wer nach einer
+  Woche weiß, was ein harmonisches Mittel ist, hat es aus den Rückmeldungen
+  gelernt, nicht aus einer Anleitung. (Korrektur September 2026: die frühere
+  Fassung „keine Anleitung“ wurde als „nichts erklären“ gelesen; das Ergebnis war
+  ein Rätsel im Jargon, das niemand verstand.)
 - Ein Satz pro Bildschirm. Regelbuch-Ton („eigene Steine als Angreifer antippen")
   kommt nicht vor. Wenn ein Bildschirm eine Anleitung braucht, ist der Bildschirm
-  falsch.
+  falsch; wenn er die Pointe braucht, ist es der Einstieg: beim ersten Start drei
+  Sätze, was das ist, woher es kommt, was es trainiert. Danach hinter dem Zahnrad.
+- Eingabe verlangt Denken. Die Antwort wird getippt, nicht aus Angeboten gewählt;
+  Angebote erscheinen erst für den dritten Versuch. Ein Suchlauf, der die Lösung
+  durch Ausprobieren findet, ist ein Fehler im Entwurf.
 - Zahlen sind das Bild. Sie sind groß, gesetzt, und haben Luft.
 - Klang ist Teil der Rückmeldung, nie Hintergrund. Stumm schaltbar.
 - Bewegung erklärt, sie schmückt nicht: die Zahlen schwingen zusammen, wenn eine
@@ -470,3 +494,8 @@ committen — immer Branch, dann Pull Request. Tagesreport statt Zwischenmeldung
 - Der Stack nennt `expo-audio` und die Deploy-Dateien, die inzwischen existieren.
 - Unverändert: Regelfassung, Engine, API, Generator, Zuständigkeitsgrenze der KI,
   Ablösbarkeit.
+- Dritte Korrektur, September 2026, nach dem ersten Test auf dem Gerät: Die App
+  prüfte eine Regel, die sie nie zeigte, der Schieberegler verriet die Lösung,
+  vier Angebote machten ein Multiple-Choice daraus, das Brett lag hinter Tagen
+  Progression, und nirgends stand, wozu das alles. Daraus die Grundsätze
+  „Die Rückmeldung lehrt die Regel“, „Eingabe verlangt Denken“ und der Einstieg.

@@ -76,3 +76,73 @@ export function recordAnswer(results: readonly DayResult[], date: string, answer
 export function isFinished(result: Pick<DayResult, 'solved' | 'answers'> | undefined): boolean {
   return !!result && (result.solved || result.answers.length >= MAX_TRIES);
 }
+
+/** Offers appear only for the try after this many misses (CLAUDE.md 2: input demands thinking). */
+export const HELP_AFTER = 2;
+
+/** Small triples of each kind that serve as the pattern in the question, never the answer. */
+const EXAMPLES: Record<HarmonyKind, readonly (readonly [number, number, number])[]> = {
+  arithmetic: [
+    [2, 4, 6],
+    [3, 5, 7],
+    [1, 3, 5],
+  ],
+  geometric: [
+    [2, 4, 8],
+    [3, 6, 12],
+    [1, 2, 4],
+  ],
+  musical: [
+    [3, 4, 6],
+    [2, 3, 6],
+    [4, 6, 12],
+  ],
+};
+
+/** An example of the same pattern that shares neither outer number with the puzzle. */
+export function patternExample(kind: HarmonyKind, a: number, c: number): readonly [number, number, number] {
+  return EXAMPLES[kind].find(([x, , z]) => x !== a && z !== c) ?? EXAMPLES[kind][0]!;
+}
+
+function gcd(x: number, y: number): number {
+  return y === 0 ? x : gcd(y, x % y);
+}
+
+function ratio(x: number, y: number): string {
+  const g = gcd(x, y) || 1;
+  return `${x / g} : ${y / g}`;
+}
+
+function factor(q: number): string {
+  const rounded = Math.round(q * 10) / 10;
+  return `×${(Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1)).replace('.', ',')}`;
+}
+
+export interface GapLine {
+  /** what the tip built on the left and on the right of the middle */
+  readonly left: string;
+  readonly right: string;
+  /** the two halves agree: the pattern holds */
+  readonly match: boolean;
+}
+
+/**
+ * What a middle x builds between a and c, read in the pattern of the kind:
+ * the two steps, the two factors, or the steps against the outer numbers.
+ * This line is the feedback that teaches the rule (CLAUDE.md 2).
+ */
+export function gapLine(kind: HarmonyKind, a: number, x: number, c: number): GapLine {
+  const match = harmonyKinds(a, x, c).includes(kind);
+  if (kind === 'arithmetic') return { left: signed(x - a), right: signed(c - x), match };
+  if (kind === 'geometric') return { left: factor(x / a), right: factor(c / x), match };
+  const d1 = x - a;
+  const d2 = c - x;
+  const steps = Number.isInteger(d1) && Number.isInteger(d2) && d1 > 0 && d2 > 0 ? ratio(d1, d2) : `${signed(d1)} : ${signed(d2)}`;
+  return { left: `Schritte ${steps}`, right: `außen ${ratio(a, c)}`, match };
+}
+
+function signed(d: number): string {
+  const v = Math.round(d * 10) / 10;
+  const s = (Number.isInteger(v) ? String(Math.abs(v)) : Math.abs(v).toFixed(1)).replace('.', ',');
+  return v < 0 ? `−${s}` : `+${s}`;
+}

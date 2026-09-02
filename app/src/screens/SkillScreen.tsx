@@ -12,7 +12,7 @@ import { hitRates, solvedAtLevel, weakestKind, weeklyHitTrend } from '../middles
 import { weeklyTrend, windowAverage } from '../coverage';
 import type { CoverageRecord } from '../coverage';
 import type { SkillRecord } from '../middles/skill';
-import { kindName, texts } from '../texts';
+import { kindName, patternName, texts } from '../texts';
 import { fonts, radius, spacing, type } from '../theme';
 import type { Palette } from '../theme';
 
@@ -39,7 +39,9 @@ export function SkillScreen({ palette, records, coverage = [] }: Props) {
         {rates.map((r) => (
           <View key={r.kind} style={styles.rateRow} testID={`skill-${r.kind}`}>
             <View style={styles.rateHead}>
-              <Text style={styles.kind}>{kindName[r.kind]}</Text>
+              <Text style={styles.kind}>
+                {kindName[r.kind]} <Text style={styles.small}>{patternName[r.kind]}</Text>
+              </Text>
               <Text style={styles.rateText}>{r.rate === null ? texts.skillNone : texts.skillRate(Math.round(r.rate * r.n), r.n)}</Text>
             </View>
             <View style={styles.track}>

@@ -38,9 +38,11 @@ interface Settings {
   readonly sound: boolean;
   /** null: the direction's own look, dark */
   readonly theme: ThemeName | null;
+  /** the entry card was seen once (CLAUDE.md 2: the point, not a manual) */
+  readonly introSeen: boolean;
 }
 
-const defaultSettings: Settings = { sound: true, theme: null };
+const defaultSettings: Settings = { sound: true, theme: null, introSeen: false };
 
 /**
  * Stufe 1: Middles is the app. The board screens of the first version stay in
@@ -57,7 +59,7 @@ export default function App() {
   const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [settingsReady, setSettingsReady] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
-  const [sheet, setSheet] = useState<'none' | 'settings' | 'rules' | 'hunt'>('none');
+  const [sheet, setSheet] = useState<'none' | 'settings' | 'rules' | 'hunt' | 'intro'>('none');
   const [tab, setTab] = useState<Tab>('today');
   const [skill, setSkill] = useState<SkillRecord[]>([]);
   const [coverage, setCoverage] = useState<CoverageRecord[]>([]);
@@ -85,6 +87,7 @@ export default function App() {
       setSkill(records);
       setCoverage(marks);
       setSettingsReady(true);
+      if (!stored.introSeen) setSheet('intro');
       const s = await ensureSession();
       if (!alive) return;
       setSession(s);
@@ -156,6 +159,8 @@ export default function App() {
     });
   }
 
+  const fullBoardOpen = unlockedLevel((l) => solvedAtLevel(skill, l)) >= 5;
+
   if ((!fontsLoaded && !fontError) || !settingsReady) return <View style={styles.root} />;
 
   return (
@@ -164,27 +169,32 @@ export default function App() {
       {tab === 'chain' ? <ChainScreen palette={palette} soundOn={settings.sound} /> : null}
       {tab === 'practice' ? <PracticeScreen palette={palette} soundOn={settings.sound} records={skill} onSkill={onSkill} /> : null}
       {tab === 'board' ? (
-        unlockedLevel((l) => solvedAtLevel(skill, l)) >= 5 ? (
-          board === 'choose' ? (
-            <View style={styles.choose} testID="board-choose">
-              <Text style={styles.sheetTitle}>{texts.boardChoose}</Text>
-              <Pressable onPress={() => setBoard('small')} style={styles.choice} testID="choose-small">
-                <Text style={styles.choiceTitle}>{texts.board}</Text>
-                <Text style={styles.note}>{texts.boardSmallNote}</Text>
-              </Pressable>
+        board === 'choose' ? (
+          <View style={styles.choose} testID="board-choose">
+            <Text style={styles.sheetTitle}>{texts.boardChoose}</Text>
+            <Pressable onPress={() => setBoard('small')} style={styles.choice} testID="choose-small">
+              <Text style={styles.choiceTitle}>{texts.board}</Text>
+              <Text style={styles.note}>{texts.boardSmallNote}</Text>
+            </Pressable>
+            {fullBoardOpen ? (
               <Pressable onPress={() => setBoard('full')} style={styles.choice} testID="choose-full">
                 <Text style={styles.choiceTitle}>{texts.boardFull}</Text>
                 <Text style={styles.note}>{texts.boardFullNote}</Text>
               </Pressable>
-            </View>
-          ) : board === 'small' ? (
-            <SmallBoardScreen palette={palette} onBack={() => setBoard('choose')} />
-          ) : (
-            <SmallBoardScreen palette={palette} rules={mebben} withMark onCoverage={onCoverage} onBack={() => setBoard('choose')} />
-          )
+            ) : (
+              <View style={[styles.choice, { opacity: 0.55 }]} testID="choose-full-locked">
+                <Text style={styles.choiceTitle}>{texts.boardFull}</Text>
+                <Text style={styles.note}>{texts.boardFullLocked}</Text>
+              </View>
+            )}
+          </View>
+        ) : board === 'small' ? (
+          <SmallBoardScreen palette={palette} onBack={() => setBoard('choose')} />
+        ) : fullBoardOpen ? (
+          <SmallBoardScreen palette={palette} rules={mebben} withMark onCoverage={onCoverage} onBack={() => setBoard('choose')} />
         ) : (
           <View style={styles.locked} testID="board-locked">
-            <Text style={styles.lockedText}>{texts.boardLocked}</Text>
+            <Text style={styles.lockedText}>{texts.boardFullLocked}</Text>
           </View>
         )
       ) : null}
@@ -243,6 +253,9 @@ export default function App() {
                 </Text>
               ) : null}
               <View style={styles.sheetActions}>
+                <Pressable onPress={() => setSheet('intro')} style={styles.textButton} testID="settings-intro">
+                  <Text style={styles.textButtonLabel}>{texts.whatIsThis}</Text>
+                </Pressable>
                 <Pressable onPress={() => setSheet('hunt')} style={styles.textButton} testID="settings-hunt">
                   <Text style={styles.textButtonLabel}>{texts.hunt}</Text>
                 </Pressable>
@@ -254,6 +267,27 @@ export default function App() {
                 </Pressable>
               </View>
             </>
+          ) : sheet === 'intro' ? (
+            <View testID="intro">
+              <Text style={styles.sheetTitle}>{texts.introTitle}</Text>
+              {texts.intro.map((line, i) => (
+                <Text key={i} style={styles.introLine}>
+                  {line}
+                </Text>
+              ))}
+              <View style={styles.sheetActions}>
+                <Pressable
+                  onPress={() => {
+                    if (!settings.introSeen) update({ introSeen: true });
+                    setSheet('none');
+                  }}
+                  style={styles.textButton}
+                  testID="intro-start"
+                >
+                  <Text style={[styles.textButtonLabel, { color: palette.accent }]}>{texts.introStart}</Text>
+                </Pressable>
+              </View>
+            </View>
           ) : sheet === 'hunt' ? (
             <>
               <HuntScreen session={session} palette={palette} />
@@ -339,5 +373,6 @@ function makeStyles(p: Palette) {
     textButton: { paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
     textButtonLabel: { fontFamily: fonts.textMedium, fontSize: type.body.fontSize, color: p.accent },
     rules: { maxHeight: 520 },
+    introLine: { fontFamily: fonts.text, fontSize: type.body.fontSize, lineHeight: type.body.lineHeight, color: p.inkSoft, marginTop: spacing.md },
   });
 }
