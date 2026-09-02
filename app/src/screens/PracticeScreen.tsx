@@ -123,7 +123,7 @@ export function PracticeScreen({ palette, soundOn, records, onSkill }: Props) {
     }
     const wrong = round.taps.filter((t) => !isRight(puzzle, t)).length;
     const via: SkillRecord['sense'] = round.cents !== undefined ? 'tone' : sense === 'length' && puzzle.form === 'triad' ? 'length' : undefined;
-    onSkill({ id: `practice:${round.count}`, t: Date.now(), mode: 'practice', level: puzzle.level, kind: practiceKind(puzzle), solved: round.solved, tries: wrong + 1, ...(round.cents === undefined ? {} : { cents: round.cents }), ...(via ? { sense: via } : {}) });
+    onSkill({ id: `practice:${round.count}`, t: Date.now(), mode: 'practice', level: puzzle.level, kind: practiceKind(puzzle), solved: round.solved, tries: wrong + 1, ...(round.cents === undefined ? {} : { cents: round.cents }), ...(via ? { sense: via } : {}), ...(puzzle.form === 'triad' && puzzle.triad.find ? { find: puzzle.triad.find.id } : {}) });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [round.finished]);
 
@@ -188,6 +188,11 @@ export function PracticeScreen({ palette, soundOn, records, onSkill }: Props) {
         </View>
       ) : null}
 
+      {puzzle.form === 'triad' && puzzle.triad.find && !round.finished ? (
+        <Text style={[styles.small, { marginTop: spacing.md }]} testID="practice-find-lead">
+          {texts.findLine(puzzle.triad.find.title, puzzle.triad.find.where)}
+        </Text>
+      ) : null}
       {puzzle.form === 'triad' && !numbersHidden ? <TriadRound round={round} styles={styles} swing={swing} palette={palette} live={live} typed={typed} /> : null}
       {puzzle.form === 'which' ? <WhichRound round={round} styles={styles} swing={swing} palette={palette} /> : null}
       {puzzle.form === 'four' ? <FourRound round={round} styles={styles} swing={swing} palette={palette} /> : null}
