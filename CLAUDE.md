@@ -61,8 +61,8 @@ Rechenlast.
 | Stufe | Inhalt | Zustand |
 |---|---|---|
 | **0** | Engine, API, Konten, Generator, Deploy-Kette | fertig, bleibt unverändert |
-| **1** | **Middles ohne Brett.** Ein Rätsel am Tag, drei Versuche, teilbares Ergebnis, Dreiklang zum Anhören, ein Satz dazu, wo dieses Mittel heute in der Welt steckt (fester Text) | **jetzt** |
-| **2** | Progression: erst arithmetisch, dann geometrisch, dann musikalisch, dann gemischt („welches Mittel?"), dann vier Zahlen mit zwei Mitteln. Deckung je Mittelart über Wochen | danach |
+| **1** | **Middles ohne Brett.** Ein Rätsel am Tag, drei Versuche, teilbares Ergebnis, Dreiklang zum Anhören, ein Satz dazu, wo dieses Mittel heute in der Welt steckt (fester Text) | gebaut |
+| **2** | Progression: erst arithmetisch, dann geometrisch, dann musikalisch, dann gemischt („welches Mittel?"), dann vier Zahlen mit zwei Mitteln. Deckung je Mittelart über Wochen | **jetzt**, auf dem Gerät gebaut |
 | **3** | Die Erzählerin: der Satz nach dem Lösen kommt vom Sprachmodell, in zwei Stimmen, cachebar pro Rätsel. Erste KI-Funktion, AI-Act-Kennzeichnung | danach |
 | **4** | Das kleine Brett: 4 × 8, acht Steine, eine Schlagart, Sieg = eine Harmonie legen. Begründungsmodus, Gegner mit offenen Karten | wer Stufe 2 durchhat |
 | **5** | Das volle Brett nach Mebben, Regelchat, Deckung auf dem Brett | für die, die es wollen |
@@ -93,6 +93,20 @@ Stufe 4 sie in vereinfachter Form zurückholt.
   Brettform desselben Tages bleibt im Datensatz für Stufe 4.
 - Der Dreiklang klingt in den Verhältnissen der drei Zahlen selbst, a : b : c über
   einem freien Grundton. Durch c ≤ 4·a bleibt er innerhalb von zwei Oktaven.
+
+### Üben, Stufe 2, genau
+
+- Das Tagesrätsel bleibt für alle gleich. Die Progression ist ein zweiter Bereich
+  „Üben": unbegrenzt viele Rätsel, auf dem Gerät erzeugt und geprüft, kein Server.
+- Fünf Stufen: arithmetisch, geometrisch, musikalisch, „welches Mittel?" (drei
+  Zahlen stehen, die Mittelart wird getippt, zwei Versuche), vier Zahlen (a und d
+  stehen, harmonisches und arithmetisches Mittel fehlen, sechs Angebote, zwei
+  Tipps — die Tetraktys 6 : 8 : 9 : 12).
+- Eine Stufe öffnet sich nach fünf gelösten Rätseln der vorigen. Jedes dritte
+  Rätsel nimmt die Mittelart dran, die in der Trefferquote hinterherhinkt.
+- Die Trefferquote je Mittelart (Abschnitt 7) speist sich aus Tagesrätsel und
+  Übung, gleitendes Fenster über die letzten fünfzig, Verlauf nach Wochen. Sie
+  liegt vorerst nur auf dem Gerät; der Server-Schnitt ist ein offener Wolf-Ping.
 
 ### Gestaltung
 
