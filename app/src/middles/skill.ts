@@ -20,6 +20,8 @@ export interface SkillRecord {
   readonly tries: number;
   /** deviation of a tuned answer from the mean, in cents; absent when tapped */
   readonly cents?: number;
+  /** the sense the answer came through (CLAUDE.md 2, andere Sinne); absent when typed. Device only. */
+  readonly sense?: 'length' | 'tone';
   /** true once the server has the record */
   readonly synced?: boolean;
 }
