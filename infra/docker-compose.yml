@@ -20,7 +20,9 @@ services:
 
   api:
     build:
-      context: ../api
+      # same image Railway builds: repository root as context, Dockerfile there
+      context: ..
+      dockerfile: Dockerfile
     restart: unless-stopped
     depends_on:
       db:

@@ -20,5 +20,9 @@ cd api && .venv/bin/python -m pytest                        # API tests, see api
 Layout: `engine/` pure TypeScript, `app/` Expo (SDK 57), `api/` FastAPI, `jobs/` nightly Middles generator,
 `infra/` docker-compose and environment variable names (`infra/.env.example`).
 
+The `Dockerfile` in this directory builds the API service from `api/`. It sits at the root because
+Railway builds a service from its root directory: with the Dockerfile there the API is built, without
+it Railway autodetects the npm workspace and fails for lack of a Node start command. See `api/README.md`.
+
 Without `EXPO_PUBLIC_API_URL` the app runs offline: local opponent, local coverage trend, a locally generated
 Middles puzzle. With the API it adds an anonymous account, coverage across devices and the daily distribution.

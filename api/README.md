@@ -13,7 +13,8 @@ DATABASE_URL=postgresql:///rithmos .venv/bin/uvicorn rithmos_api.main:app --relo
 ```
 
 Environment variables: see `infra/.env.example`. Schema: `schema/*.sql`, applied in order by
-`rithmos_api.migrate` (also on every start, see `Procfile` and `Dockerfile`).
+`rithmos_api.migrate`, which also runs before the server on every start (see the `Dockerfile`
+in the repository root).
 
 ## Endpoints (v1)
 
@@ -29,5 +30,17 @@ Environment variables: see `infra/.env.example`. Schema: `schema/*.sql`, applied
 | GET | `/v1/puzzles/{date}/distribution` | – | attempts, solved, histogram of tries |
 | POST | `/v1/admin/puzzles` | `x-jobs-token` | ingestion from the nightly job |
 
-Railway: root directory `api`, start command from `Procfile`, variables `DATABASE_URL`,
-`RITHMOS_JOBS_TOKEN`, `RITHMOS_CORS_ORIGINS`.
+## Railway
+
+The image is built from the **repository root** by the `Dockerfile` there, which copies `api/`
+into `/srv`. So leave the service's **Root Directory empty**: pointed at `api`, Railway no longer
+sees that Dockerfile; pointed at the root without it, Railway autodetects the npm workspace in
+`package.json`, looks for a Node start command and the build fails.
+
+Required variables: `DATABASE_URL` (reference the Railway PostgreSQL service), `RITHMOS_JOBS_TOKEN`,
+`RITHMOS_CORS_ORIGINS`. `PORT` is injected by Railway. Without `DATABASE_URL` the container exits
+immediately with `RuntimeError: DATABASE_URL is not set` instead of starting half-configured.
+The service needs a generated domain before the app can reach it; `/health` answers
+`{"ok": true, "schema_version": N}`.
+
+`Procfile` is kept for a non-Docker deployment of `api/` and is unused by the Dockerfile build.
