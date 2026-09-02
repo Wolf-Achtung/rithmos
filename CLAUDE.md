@@ -113,6 +113,12 @@ Stufe 4 sie in vereinfachter Form zurückholt.
   Kette kennt die Suche (`jobs/src/chain.ts`); Ergebnis ist die erreichte Länge,
   teilbar als `Kette Nº 47 · 6/7`. Auf dem Gerät erzeugt, kein Server.
 
+- **Harmonie-Jagd.** Ein Foto von etwas Zählbarem; der Spieler tippt zuerst, ob
+  darin eine Harmonie steckt; dann zählt das Bildmodell nur (Namen und Anzahlen,
+  `POST /v1/hunt`, sechs Jagden pro Konto und Tag, kein Bild wird gespeichert),
+  und die Engine in der App entscheidet, welche Anzahlen ein Mittel bilden. Das
+  Modell nennt nie eine Harmonie. Erreichbar hinter dem Zahnrad.
+
 ### Üben, Stufe 2, genau
 
 - Das Tagesrätsel bleibt für alle gleich. Die Progression ist ein zweiter Bereich
