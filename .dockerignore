@@ -1,0 +1,21 @@
+# The image only needs api/. Everything else stays out of the build context.
+.git/
+node_modules/
+**/node_modules/
+app/
+engine/
+jobs/
+infra/
+api/.venv/
+api/tests/
+api/.pytest_cache/
+api/.ruff_cache/
+**/__pycache__/
+*.pyc
+dist/
+**/dist/
+.expo/
+coverage/
+*.md
+.env
+.env.*
