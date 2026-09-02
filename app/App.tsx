@@ -10,6 +10,7 @@ import type { Session } from './src/api/client';
 import { mergeSkill } from './src/middles/skill';
 import type { SkillRecord } from './src/middles/skill';
 import { MiddlesScreen } from './src/screens/MiddlesScreen';
+import { ChainScreen } from './src/screens/ChainScreen';
 import { PracticeScreen } from './src/screens/PracticeScreen';
 import { RulesScreen } from './src/screens/RulesScreen';
 import { SkillScreen } from './src/screens/SkillScreen';
@@ -22,7 +23,7 @@ import type { Palette, ThemeName } from './src/theme';
 const SETTINGS_KEY = 'middles:settings';
 const SKILL_KEY = 'middles:skill';
 
-type Tab = 'today' | 'practice' | 'skill';
+type Tab = 'today' | 'chain' | 'practice' | 'skill';
 
 interface Settings {
   readonly sound: boolean;
@@ -118,6 +119,7 @@ export default function App() {
   return (
     <SafeAreaView style={styles.root}>
       {tab === 'today' ? <MiddlesScreen session={session} palette={palette} soundOn={settings.sound} onOpenSettings={() => setSheet('settings')} onSkill={onSkill} /> : null}
+      {tab === 'chain' ? <ChainScreen palette={palette} soundOn={settings.sound} /> : null}
       {tab === 'practice' ? <PracticeScreen palette={palette} soundOn={settings.sound} records={skill} onSkill={onSkill} /> : null}
       {tab === 'skill' ? <SkillScreen palette={palette} records={skill} /> : null}
 
@@ -125,6 +127,7 @@ export default function App() {
         {(
           [
             ['today', texts.tabToday],
+            ['chain', texts.tabChain],
             ['practice', texts.tabPractice],
             ['skill', texts.tabSkill],
           ] as const
@@ -223,7 +226,7 @@ function Toggle<T extends string | boolean>({ options, value, onChange, styles, 
 function makeStyles(p: Palette) {
   return StyleSheet.create({
     root: { flex: 1, backgroundColor: p.background },
-    tabs: { flexDirection: 'row', justifyContent: 'center', gap: spacing.xl, paddingVertical: spacing.md, borderTopWidth: 1, borderTopColor: p.border },
+    tabs: { flexDirection: 'row', justifyContent: 'center', gap: spacing.lg, paddingVertical: spacing.md, borderTopWidth: 1, borderTopColor: p.border },
     tab: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
     tabLabel: { fontFamily: fonts.textMedium, fontSize: type.small.fontSize, color: p.muted, letterSpacing: 0.4 },
     tabActive: { color: p.accent },
