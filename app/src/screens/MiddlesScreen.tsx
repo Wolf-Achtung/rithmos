@@ -1,7 +1,9 @@
 /**
  * Middles without the board (CLAUDE.md, Stufe 1). One screen: two numbers
- * stand, the middle is missing, four offers, three tries. On the right answer
- * the three numbers swing together, the chord sounds, one sentence appears.
+ * stand, the middle is missing, the answer is typed, three tries; after each
+ * try a line shows what the tip built, and that line teaches the rule. On the
+ * right answer the three numbers swing together, the chord sounds, one
+ * sentence appears.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Linking, Pressable, ScrollView, Share, Text, View, useWindowDimensions } from 'react-native';
@@ -11,17 +13,16 @@ import { generateMiddles, isoDate, middlesNumber } from '../../../jobs/src/middl
 import type { Triad } from '../../../jobs/src/middles';
 import { apiConfigured, fetchDistribution, fetchNarration, fetchTodayPuzzle, submitAttempt } from '../api/client';
 import type { Distribution, Narration, Session } from '../api/client';
-import { Numeral, Offer, PillButton, Wave, intervalLabel, makeTriadStyles } from '../components/Triad';
+import { Gaps, Keypad, Numeral, Offer, PillButton, Wave, intervalLabel, makeTriadStyles } from '../components/Triad';
 import { Tuner } from '../components/Tuner';
 import type { TunerState } from '../components/Tuner';
 import { chordFrequencies } from '../middles/chord';
-import { MAX_TRIES, feedbackFor, isFinished, recordAnswer, shareText, streakOn, triesOf } from '../middles/logic';
+import { HELP_AFTER, MAX_TRIES, feedbackFor, gapLine, isFinished, patternExample, recordAnswer, shareText, streakOn, triesOf } from '../middles/logic';
 import type { DayResult } from '../middles/logic';
 import type { SkillRecord } from '../middles/skill';
 import { playChord } from '../middles/sound';
 import { canTune } from '../middles/tone';
 import { judgeRelease } from '../middles/tuning';
-import type { Snap } from '../middles/tuning';
 import { store } from '../storage';
 import { texts, triadSentence } from '../texts';
 import type { Palette } from '../theme';
@@ -92,6 +93,7 @@ export function MiddlesScreen({ session, palette, soundOn, onOpenSettings, onSki
   const [picked, setPicked] = useState<number | null>(null);
   const [shareNote, setShareNote] = useState<string | null>(null);
   const [live, setLive] = useState<TunerState | null>(null);
+  const [typed, setTyped] = useState('');
   const started = useRef(Date.now());
   const submitted = useRef(false);
   const swing = useSharedValue(0);
@@ -140,11 +142,17 @@ export function MiddlesScreen({ session, palette, soundOn, onOpenSettings, onSki
     const solved = feedbackFor(loaded.triad, answer).kind === 'right';
     const next = recordAnswer(results, loaded.date, answer, solved);
     setResults(next);
+    setTyped('');
     void store.write(RESULTS_KEY, next);
   }
 
+  function enter() {
+    const v = Number(typed);
+    if (typed.length > 0 && Number.isInteger(v)) tap(v);
+  }
+
   /** The finger is up: right within the lock, the other mean, or off by so many cents. */
-  function release(value: number, _snap: Snap | null) {
+  function release(value: number) {
     if (!loaded || finished) return;
     const { triad, b } = loaded;
     const verdict = judgeRelease(value, b, triad.kind, triad.a, triad.c);
@@ -183,9 +191,13 @@ export function MiddlesScreen({ session, palette, soundOn, onOpenSettings, onSki
         ? Number.isInteger(lastAnswer)
           ? texts.triadWrong(lastAnswer!)
           : texts.triadOff(lastAnswer!)
-        : texts.triadQuestion(triad.kind);
+        : texts.triadQuestion(patternExample(triad.kind, triad.a, triad.c));
   const tuning = canTune && soundOn && !finished;
-  const liveValue = live ? (live.snap ? String(live.snap.value) : live.value.toFixed(1).replace('.', ',')) : '?';
+  const helped = tries >= HELP_AFTER;
+  const gaps = finished ? gapLine(triad.kind, triad.a, b, triad.c) : lastAnswer !== undefined ? gapLine(triad.kind, triad.a, lastAnswer, triad.c) : null;
+  // the last tip stays in the middle until the next one is typed: the gap line explains it
+  const shown = typed.length > 0 ? typed : lastAnswer !== undefined ? String(lastAnswer).replace('.', ',') : '?';
+  const showingLast = typed.length === 0 && lastAnswer !== undefined;
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.container} testID="middles">
@@ -214,23 +226,18 @@ export function MiddlesScreen({ session, palette, soundOn, onOpenSettings, onSki
         {finished ? (
           <Numeral value={b} styles={styles} swing={swing} rate={b / triad.a} accent={solved ? 'accent' : 'missing'} testID="middles-answer" />
         ) : (
-          <Text style={[styles.numeral, styles.numeralMissing, live?.snap && styles.numeralAccent, live && !live.snap && styles.numeralLive]} testID="middles-missing">
-            {liveValue}
+          <Text style={[styles.numeral, styles.numeralMissing, showingLast && styles.numeralWrong, live && styles.numeralLive]} testID="middles-missing">
+            {live ? '♪' : shown}
           </Text>
         )}
         <Numeral value={triad.c} styles={styles} swing={swing} rate={triad.c / triad.a} />
       </View>
 
+      {gaps ? <Gaps line={gaps} styles={styles} testID="middles-gaps" /> : <View style={styles.gaps} />}
+
       <View style={styles.waves}>
         <Wave cycles={1} label={String(triad.a)} styles={styles} swing={swing} color={palette.accent} muted={palette.muted} />
-        <Wave
-          cycles={finished ? b / triad.a : live ? live.value / triad.a : 0}
-          label={finished ? intervalLabel(b, triad.a) : live?.snap ? intervalLabel(live.snap.value, triad.a) : '?'}
-          styles={styles}
-          swing={swing}
-          color={solved || live?.snap ? palette.accent : palette.missing}
-          muted={palette.muted}
-        />
+        <Wave cycles={finished ? b / triad.a : 0} label={finished ? intervalLabel(b, triad.a) : '?'} styles={styles} swing={swing} color={solved ? palette.accent : palette.missing} muted={palette.muted} />
         <Wave cycles={triad.c / triad.a} label={intervalLabel(triad.c, triad.a)} styles={styles} swing={swing} color={palette.accent} muted={palette.muted} />
       </View>
 
@@ -238,15 +245,16 @@ export function MiddlesScreen({ session, palette, soundOn, onOpenSettings, onSki
         {sentence}
       </Text>
 
-      {tuning ? (
-        <Tuner a={triad.a} c={triad.c} palette={palette} soundOn={soundOn} onChange={setLive} onRelease={release} testID="middles-tuner" />
-      ) : !finished ? (
+      {!finished && !helped ? <Keypad value={typed} onChange={setTyped} onEnter={enter} enterLabel={texts.keypadEnter} styles={styles} testID="middles-keypad" /> : null}
+      {!finished && helped ? (
         <View style={styles.offers} testID="middles-offers">
           {triad.options.map((v) => (
             <Offer key={v} label={String(v)} onPress={() => tap(v)} state={today?.answers.includes(v) ? 'wrong' : 'open'} styles={styles} testID={`offer-${v}`} />
           ))}
         </View>
-      ) : (
+      ) : null}
+      {tuning ? <Tuner a={triad.a} c={triad.c} palette={palette} soundOn={soundOn} onChange={setLive} onRelease={release} testID="middles-tuner" /> : null}
+      {finished ? (
         <View style={styles.after}>
           {triad.find ? (
             <Pressable onPress={() => void Linking.openURL(triad.find!.source).catch(() => undefined)} testID="middles-find" hitSlop={8}>
@@ -288,7 +296,7 @@ export function MiddlesScreen({ session, palette, soundOn, onOpenSettings, onSki
             </View>
           ) : null}
         </View>
-      )}
+      ) : null}
 
       <View style={styles.footer}>
         <View style={styles.footerLeft}>
