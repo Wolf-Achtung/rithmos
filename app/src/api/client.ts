@@ -164,3 +164,19 @@ export async function fetchNarration(session: Session, date: string): Promise<Na
     throw e;
   }
 }
+
+/** The hunt (Zug F): the vision model counts things in a photo. Null when the server has no model. */
+export interface HuntResult {
+  readonly groups: readonly { readonly label: string; readonly count: number }[];
+  readonly model: string;
+  readonly remaining: number;
+}
+
+export async function sendHunt(session: Session, mediaType: 'image/jpeg' | 'image/png' | 'image/webp', imageBase64: string): Promise<HuntResult | null> {
+  try {
+    return await request<HuntResult>('/v1/hunt', { method: 'POST', body: { media_type: mediaType, image: imageBase64 }, token: session.token });
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 404) return null;
+    throw e;
+  }
+}

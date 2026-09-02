@@ -11,6 +11,7 @@ import { mergeSkill } from './src/middles/skill';
 import type { SkillRecord } from './src/middles/skill';
 import { MiddlesScreen } from './src/screens/MiddlesScreen';
 import { ChainScreen } from './src/screens/ChainScreen';
+import { HuntScreen } from './src/screens/HuntScreen';
 import { PracticeScreen } from './src/screens/PracticeScreen';
 import { RulesScreen } from './src/screens/RulesScreen';
 import { SkillScreen } from './src/screens/SkillScreen';
@@ -48,7 +49,7 @@ export default function App() {
   const [settings, setSettings] = useState<Settings>(defaultSettings);
   const [settingsReady, setSettingsReady] = useState(false);
   const [session, setSession] = useState<Session | null>(null);
-  const [sheet, setSheet] = useState<'none' | 'settings' | 'rules'>('none');
+  const [sheet, setSheet] = useState<'none' | 'settings' | 'rules' | 'hunt'>('none');
   const [tab, setTab] = useState<Tab>('today');
   const [skill, setSkill] = useState<SkillRecord[]>([]);
 
@@ -170,10 +171,25 @@ export default function App() {
               </Row>
               <Text style={styles.note}>{texts.ruleSetNote(mebben.name, mebben.source)}</Text>
               <View style={styles.sheetActions}>
+                <Pressable onPress={() => setSheet('hunt')} style={styles.textButton} testID="settings-hunt">
+                  <Text style={styles.textButtonLabel}>{texts.hunt}</Text>
+                </Pressable>
                 <Pressable onPress={() => setSheet('rules')} style={styles.textButton} testID="settings-rules">
                   <Text style={styles.textButtonLabel}>{texts.rules}</Text>
                 </Pressable>
                 <Pressable onPress={() => setSheet('none')} style={styles.textButton} testID="settings-close">
+                  <Text style={styles.textButtonLabel}>{texts.close}</Text>
+                </Pressable>
+              </View>
+            </>
+          ) : sheet === 'hunt' ? (
+            <>
+              <HuntScreen session={session} palette={palette} />
+              <View style={styles.sheetActions}>
+                <Pressable onPress={() => setSheet('settings')} style={styles.textButton} testID="hunt-back">
+                  <Text style={styles.textButtonLabel}>{texts.settings}</Text>
+                </Pressable>
+                <Pressable onPress={() => setSheet('none')} style={styles.textButton} testID="hunt-close">
                   <Text style={styles.textButtonLabel}>{texts.close}</Text>
                 </Pressable>
               </View>
