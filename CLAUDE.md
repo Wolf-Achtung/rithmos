@@ -100,6 +100,13 @@ Stufe 4 sie in vereinfachter Form zurückholt.
   ohne Dauerton bleiben die vier Angebote. Auf iOS und Android braucht der Dauerton
   eine weitere Abhängigkeit (`react-native-audio-api`) — Wolf-Ping, bis dahin Angebote.
 
+- **Fundstück des Tages.** Jeder zweite Tag ist ein echtes Vorkommen aus
+  `engine/rules/finds.ts` (Monochord, Villa Emo, Blendenreihe, F1-Score, …): die
+  Zahlen des Fundstücks, nach dem Lösen sein Satz, Ort und Quelle. Ein Test lässt
+  jedes Fundstück durch die Erkennung; was nicht verifiziert, kommt nicht ins
+  Produkt. Die Übung nimmt an jedem vierten Rätsel der Stufen 1–3 ein Fundstück
+  ihrer Mittelart.
+
 ### Üben, Stufe 2, genau
 
 - Das Tagesrätsel bleibt für alle gleich. Die Progression ist ein zweiter Bereich
