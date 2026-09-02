@@ -107,6 +107,12 @@ Stufe 4 sie in vereinfachter Form zurückholt.
   Produkt. Die Übung nimmt an jedem vierten Rätsel der Stufen 1–3 ein Fundstück
   ihrer Mittelart.
 
+- **Die Kette.** Ein zweites Tagesrätsel, konstruktiv statt abfragend: zwölf Zahlen
+  liegen aus, der Spieler legt sie zu einer Kette, in der je drei aufeinander
+  folgende eine Harmonie bilden (2 · 4 · 6 · 9 · 12 · 16 · 24 · 48). Die längste
+  Kette kennt die Suche (`jobs/src/chain.ts`); Ergebnis ist die erreichte Länge,
+  teilbar als `Kette Nº 47 · 6/7`. Auf dem Gerät erzeugt, kein Server.
+
 ### Üben, Stufe 2, genau
 
 - Das Tagesrätsel bleibt für alle gleich. Die Progression ist ein zweiter Bereich
