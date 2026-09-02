@@ -15,6 +15,9 @@ import { HuntScreen } from './src/screens/HuntScreen';
 import { PracticeScreen } from './src/screens/PracticeScreen';
 import { RulesScreen } from './src/screens/RulesScreen';
 import { SkillScreen } from './src/screens/SkillScreen';
+import { SmallBoardScreen } from './src/screens/SmallBoardScreen';
+import { unlockedLevel } from '../jobs/src/practice';
+import { solvedAtLevel } from './src/middles/skill';
 import { store } from './src/storage';
 import { ensureSession, syncSkill } from './src/sync';
 import { texts } from './src/texts';
@@ -24,7 +27,7 @@ import type { Palette, ThemeName } from './src/theme';
 const SETTINGS_KEY = 'middles:settings';
 const SKILL_KEY = 'middles:skill';
 
-type Tab = 'today' | 'chain' | 'practice' | 'skill';
+type Tab = 'today' | 'chain' | 'practice' | 'board' | 'skill';
 
 interface Settings {
   readonly sound: boolean;
@@ -122,6 +125,15 @@ export default function App() {
       {tab === 'today' ? <MiddlesScreen session={session} palette={palette} soundOn={settings.sound} onOpenSettings={() => setSheet('settings')} onSkill={onSkill} /> : null}
       {tab === 'chain' ? <ChainScreen palette={palette} soundOn={settings.sound} /> : null}
       {tab === 'practice' ? <PracticeScreen palette={palette} soundOn={settings.sound} records={skill} onSkill={onSkill} /> : null}
+      {tab === 'board' ? (
+        unlockedLevel((l) => solvedAtLevel(skill, l)) >= 5 ? (
+          <SmallBoardScreen palette={palette} />
+        ) : (
+          <View style={styles.locked} testID="board-locked">
+            <Text style={styles.lockedText}>{texts.boardLocked}</Text>
+          </View>
+        )
+      ) : null}
       {tab === 'skill' ? <SkillScreen palette={palette} records={skill} /> : null}
 
       <View style={styles.tabs}>
@@ -130,6 +142,7 @@ export default function App() {
             ['today', texts.tabToday],
             ['chain', texts.tabChain],
             ['practice', texts.tabPractice],
+            ['board', texts.tabBoard],
             ['skill', texts.tabSkill],
           ] as const
         ).map(([key, label]) => (
@@ -242,7 +255,9 @@ function Toggle<T extends string | boolean>({ options, value, onChange, styles, 
 function makeStyles(p: Palette) {
   return StyleSheet.create({
     root: { flex: 1, backgroundColor: p.background },
-    tabs: { flexDirection: 'row', justifyContent: 'center', gap: spacing.lg, paddingVertical: spacing.md, borderTopWidth: 1, borderTopColor: p.border },
+    locked: { flex: 1, justifyContent: 'center', paddingHorizontal: spacing.xl },
+    lockedText: { fontFamily: fonts.text, fontSize: type.body.fontSize, lineHeight: type.body.lineHeight, color: p.muted, textAlign: 'center' },
+    tabs: { flexDirection: 'row', justifyContent: 'center', gap: spacing.md, paddingVertical: spacing.md, borderTopWidth: 1, borderTopColor: p.border },
     tab: { paddingHorizontal: spacing.sm, paddingVertical: spacing.xs },
     tabLabel: { fontFamily: fonts.textMedium, fontSize: type.small.fontSize, color: p.muted, letterSpacing: 0.4 },
     tabActive: { color: p.accent },

@@ -12,4 +12,5 @@ export * from './game';
 export * from './search';
 export * from './solver';
 export { mebben } from './rules/mebben';
+export { small } from './rules/small';
 export { harmonyApplications } from './rules/applications';

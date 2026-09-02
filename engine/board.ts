@@ -165,6 +165,7 @@ export function initialPosition(rules: RuleSet = mebben): Position {
         square: { file: spec.file, rank: toRank(spec.rank) },
       });
     }
+    if (!setup.pyramid) continue;
     const value = pyramidValue(setup.pyramid.components);
     pieces.push({
       id: makeId(side, 'pyramid', value, taken),

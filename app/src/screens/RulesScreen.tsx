@@ -9,8 +9,8 @@ import { colors, spacing } from '../theme';
 const shapeName: Record<SimpleShape, string> = { round: 'Runde', triangle: 'Dreieck', square: 'Quadrat' };
 const directionName = { orthogonal: 'gerade, nicht diagonal', diagonal: 'ausschließlich diagonal', all: 'alle Richtungen' } as const;
 
-const white = mebben.setup.white.pyramid.components.map((c) => c.value);
-const black = mebben.setup.black.pyramid.components.map((c) => c.value);
+const white = mebben.setup.white.pyramid!.components.map((c) => c.value);
+const black = mebben.setup.black.pyramid!.components.map((c) => c.value);
 
 /** The rule set in use, named with its source, built from the data in engine/rules. */
 export function RulesScreen() {

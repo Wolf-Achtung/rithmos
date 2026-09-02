@@ -121,6 +121,8 @@ def test_reingest_replaces_untouched_puzzles_only(client):
         "/v1/admin/puzzles", json={"puzzles": [puzzle(TODAY, seed=2), puzzle(YESTERDAY, seed=2)]}, headers=JOBS
     )
     assert r.json() == {"stored": 1, "skipped": 1}
+    forced = client.post("/v1/admin/puzzles", json={"puzzles": [puzzle(TODAY, seed=3)], "replace": True}, headers=JOBS)
+    assert forced.json() == {"stored": 1, "skipped": 0}
 
 
 def test_ingest_validates_squares(client):

@@ -59,7 +59,8 @@ export interface PyramidSpec {
 
 export interface SideSetup {
   readonly pieces: readonly PieceSpec[];
-  readonly pyramid: PyramidSpec;
+  /** Absent in rule sets without a pyramid (the small board). */
+  readonly pyramid?: PyramidSpec;
 }
 
 export type VictoryClass = 'minor' | 'major' | 'greatest';
@@ -84,6 +85,8 @@ export interface RuleSet {
   readonly captureTiming: 'after_move';
   /** A pyramid component can be captured on its own value. */
   readonly pyramidComponentCapture: boolean;
+  /** The ways to capture this rule set allows; all four when absent. */
+  readonly captureMethods?: readonly ('meeting' | 'ambush' | 'assault' | 'siege')[];
   readonly setup: { readonly white: SideSetup; readonly black: SideSetup };
   readonly victory: Readonly<Record<VictoryClass, VictoryRule>>;
   /** Items of this rule set that could not be checked against the source. */
