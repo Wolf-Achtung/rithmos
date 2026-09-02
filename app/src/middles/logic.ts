@@ -28,8 +28,10 @@ export function feedbackFor(triad: Pick<Triad, 'kind' | 'a' | 'c'>, answer: numb
 export interface DayResult {
   readonly date: string;
   readonly solved: boolean;
-  /** offers tapped, in order; length 1..MAX_TRIES */
+  /** offers tapped or tones released, in order; length 1..MAX_TRIES */
   readonly answers: readonly number[];
+  /** deviation of the last released tone from the mean, in cents; absent when tapped */
+  readonly cents?: number;
 }
 
 export function triesOf(result: Pick<DayResult, 'answers'>): number {
@@ -62,11 +64,12 @@ export function shareText(date: string, result: Pick<DayResult, 'solved' | 'answ
 }
 
 /** Update the day's stored results with one more answer. */
-export function recordAnswer(results: readonly DayResult[], date: string, answer: number, solved: boolean): DayResult[] {
+export function recordAnswer(results: readonly DayResult[], date: string, answer: number, solved: boolean, cents?: number): DayResult[] {
   const rest = results.filter((r) => r.date !== date);
   const current = results.find((r) => r.date === date);
   const answers = [...(current?.answers ?? []), answer];
-  return [...rest, { date, solved, answers }].sort((x, y) => (x.date < y.date ? -1 : 1));
+  const next: DayResult = cents === undefined ? { date, solved, answers } : { date, solved, answers, cents };
+  return [...rest, next].sort((x, y) => (x.date < y.date ? -1 : 1));
 }
 
 /** The day is over when it is solved or the tries are spent. */

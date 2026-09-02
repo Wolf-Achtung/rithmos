@@ -34,6 +34,9 @@ describe('a day and its streak', () => {
     const spent = recordAnswer(recordAnswer(recordAnswer([], '2026-09-03', 1, false), '2026-09-03', 2, false), '2026-09-03', 3, false);
     expect(isFinished(spent[0])).toBe(true);
     expect(isFinished(undefined)).toBe(false);
+    const tuned = recordAnswer([], '2026-09-05', 8.3, false, 64);
+    expect(tuned[0]).toEqual({ date: '2026-09-05', solved: false, answers: [8.3], cents: 64 });
+    expect(recordAnswer(tuned, '2026-09-05', 8, true, 3)[0]).toMatchObject({ solved: true, answers: [8.3, 8], cents: 3 });
   });
 
   it('crosses month and year boundaries', () => {

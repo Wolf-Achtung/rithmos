@@ -86,6 +86,7 @@ export const texts = {
   triadTry: (n: number, max: number) => `Versuch ${n} von ${max}`,
   triadOtherMean: (answer: number, mean: HarmonyKind) => `${answer} ist das ${meanName[mean]} — hier ist eine andere Harmonie gefragt.`,
   triadWrong: (answer: number) => `${answer} macht keine Harmonie aus den dreien.`,
+  triadOff: (value: number) => `Daneben — du warst bei ${value.toFixed(1).replace('.', ',')}.`,
   triadRevealed: (b: number) => `Die Mitte war ${b}. Morgen gibt es eine neue.`,
   triadPlayedToday: 'Heute schon gespielt. Morgen gibt es eine neue Mitte.',
   triadListen: 'Dreiklang anhören',
