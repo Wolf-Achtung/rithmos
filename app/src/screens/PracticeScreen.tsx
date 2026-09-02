@@ -4,13 +4,14 @@
  * per mean. Same picture as the daily: numerals, waves, offers.
  */
 import { useEffect, useMemo, useState } from 'react';
-import { Linking, Pressable, ScrollView, Text, View, useWindowDimensions } from 'react-native';
+import { Linking, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { Easing, useSharedValue, withSequence, withTiming } from 'react-native-reanimated';
 import { HARMONY_KINDS } from '../../../engine/harmony';
 import type { HarmonyKind } from '../../../engine/harmony';
 import { choosePracticeLevel, generatePractice, practiceKind, practiceSeed, unlockedLevel, UNLOCK_AFTER } from '../../../jobs/src/practice';
 import type { PracticePuzzle } from '../../../jobs/src/practice';
 import { Gaps, Keypad, Numeral, Offer, PillButton, Wave, intervalLabel, makeTriadStyles } from '../components/Triad';
+import { Lengths } from '../components/Lengths';
 import { Tuner } from '../components/Tuner';
 import type { TunerState } from '../components/Tuner';
 import type { Swing, TriadStyles } from '../components/Triad';
@@ -20,8 +21,9 @@ import { solvedAtLevel, weakestKind } from '../middles/skill';
 import type { SkillRecord } from '../middles/skill';
 import { playChord } from '../middles/sound';
 import { canTune } from '../middles/tone';
-import { judgeRelease } from '../middles/tuning';
+import { judgeLength, judgeRelease } from '../middles/tuning';
 import { texts, triadSentence } from '../texts';
+import { fonts, radius, spacing, type } from '../theme';
 import type { Palette } from '../theme';
 
 interface Props {
@@ -30,6 +32,10 @@ interface Props {
   readonly records: readonly SkillRecord[];
   readonly onSkill: (record: SkillRecord) => void;
 }
+
+/** The sense an answer comes through (CLAUDE.md 2, andere Sinne): typed, drawn as a length, or tuned by ear. */
+type Sense = 'number' | 'length' | 'tone';
+const SENSES: readonly Sense[] = ['number', 'length', 'tone'];
 
 /** What the player did on the current puzzle: taps in order. */
 interface Round {
@@ -66,6 +72,16 @@ function applyTap(round: Round, tap: number | HarmonyKind): Round {
   return { ...round, taps, solved, finished: solved || wrong >= maxTries(puzzle) };
 }
 
+/** A released length on a triad round: the answer it stands for, judged by eye. */
+function applyLength(round: Round, value: number): Round {
+  const { puzzle } = round;
+  if (puzzle.form !== 'triad') return round;
+  const { a, c, kind } = puzzle.triad;
+  const verdict = judgeLength(value, puzzle.b, kind, a, c);
+  const answer = verdict.kind === 'right' ? puzzle.b : verdict.kind === 'otherMean' ? verdict.value : Math.round(value * 10) / 10;
+  return applyTap(round, answer);
+}
+
 /** A released tone on a triad round: the answer it stands for, and its deviation. */
 function applyRelease(round: Round, value: number): Round {
   const { puzzle } = round;
@@ -92,6 +108,8 @@ export function PracticeScreen({ palette, soundOn, records, onSkill }: Props) {
   const swing = useSharedValue(0);
   const [live, setLive] = useState<TunerState | null>(null);
   const [typed, setTyped] = useState('');
+  const [sense, setSense] = useState<Sense>('number');
+  const own = useMemo(() => makeOwnStyles(palette), [palette]);
 
   const values = useMemo(() => valuesOf(puzzle), [puzzle]);
   const chord = useMemo(() => chordFrequencies([values[0]!, values[1]!, values[2]!]).concat(values.slice(3).map((v) => (220 * v) / values[0]!)), [values]);
@@ -104,7 +122,8 @@ export function PracticeScreen({ palette, soundOn, records, onSkill }: Props) {
       if (soundOn) void playChord(chord).catch(() => undefined);
     }
     const wrong = round.taps.filter((t) => !isRight(puzzle, t)).length;
-    onSkill({ id: `practice:${round.count}`, t: Date.now(), mode: 'practice', level: puzzle.level, kind: practiceKind(puzzle), solved: round.solved, tries: wrong + 1, ...(round.cents === undefined ? {} : { cents: round.cents }) });
+    const via: SkillRecord['sense'] = round.cents !== undefined ? 'tone' : sense === 'length' && puzzle.form === 'triad' ? 'length' : undefined;
+    onSkill({ id: `practice:${round.count}`, t: Date.now(), mode: 'practice', level: puzzle.level, kind: practiceKind(puzzle), solved: round.solved, tries: wrong + 1, ...(round.cents === undefined ? {} : { cents: round.cents }), ...(via ? { sense: via } : {}) });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [round.finished]);
 
@@ -124,13 +143,23 @@ export function PracticeScreen({ palette, soundOn, records, onSkill }: Props) {
     setRound(applyRelease(round, value));
   }
 
+  function releaseLength(value: number) {
+    if (round.finished) return;
+    setRound(applyLength(round, value));
+  }
+
   function next() {
     setLive(null);
     setTyped('');
     setRound(nextRound(records));
   }
 
-  const tuning = canTune && soundOn && !round.finished && puzzle.form === 'triad';
+  const senses = SENSES.filter((x) => x === 'number' || (puzzle.form === 'triad' && (x === 'length' || (canTune && soundOn))));
+  const active: Sense = senses.includes(sense) ? sense : 'number';
+  const tuning = active === 'tone' && canTune && soundOn && !round.finished && puzzle.form === 'triad';
+  const byLength = active === 'length' && puzzle.form === 'triad' && !round.finished;
+  // by length the numbers stay hidden until the first try: the eye decides, the feedback shows the numbers
+  const numbersHidden = byLength && round.taps.length === 0;
 
   const wrongTaps = round.taps.filter((t) => !isRight(puzzle, t)).length;
   const helped = puzzle.form !== 'triad' || wrongTaps >= HELP_AFTER;
@@ -149,15 +178,28 @@ export function PracticeScreen({ palette, soundOn, records, onSkill }: Props) {
         </View>
       </View>
 
-      {puzzle.form === 'triad' ? <TriadRound round={round} styles={styles} swing={swing} palette={palette} live={live} typed={typed} /> : null}
+      {senses.length > 1 ? (
+        <View style={own.senses} testID="practice-senses">
+          {senses.map((x) => (
+            <Pressable key={x} onPress={() => setSense(x)} style={[own.sense, x === active && own.senseActive]} testID={`sense-${x}`}>
+              <Text style={[own.senseLabel, x === active && own.senseLabelActive]}>{texts.senseName[x]}</Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
+
+      {puzzle.form === 'triad' && !numbersHidden ? <TriadRound round={round} styles={styles} swing={swing} palette={palette} live={live} typed={typed} /> : null}
       {puzzle.form === 'which' ? <WhichRound round={round} styles={styles} swing={swing} palette={palette} /> : null}
       {puzzle.form === 'four' ? <FourRound round={round} styles={styles} swing={swing} palette={palette} /> : null}
 
       <Text style={styles.sentence} testID="practice-sentence">
-        {sentenceFor(round)}
+        {numbersHidden ? texts.lengthQuestion : sentenceFor(round)}
       </Text>
 
-      {!round.finished && !helped ? <Keypad value={typed} onChange={setTyped} onEnter={enter} enterLabel={texts.keypadEnter} styles={styles} testID="practice-keypad" /> : null}
+      {byLength && !helped ? (
+        <Lengths key={round.count} a={puzzle.triad.a} c={puzzle.triad.c} example={patternExample(puzzle.triad.kind, puzzle.triad.a, puzzle.triad.c)} palette={palette} onChange={() => undefined} onRelease={releaseLength} testID="practice-lengths" />
+      ) : null}
+      {!round.finished && !helped && active === 'number' ? <Keypad value={typed} onChange={setTyped} onEnter={enter} enterLabel={texts.keypadEnter} styles={styles} testID="practice-keypad" /> : null}
       {!round.finished && helped ? (
         <View style={styles.offers} testID="practice-offers">
           {puzzle.form === 'which'
@@ -169,7 +211,7 @@ export function PracticeScreen({ palette, soundOn, records, onSkill }: Props) {
               ))}
         </View>
       ) : null}
-      {tuning && puzzle.form === 'triad' ? <Tuner a={puzzle.triad.a} c={puzzle.triad.c} palette={palette} soundOn={soundOn} onChange={setLive} onRelease={release} testID="practice-tuner" /> : null}
+      {tuning && puzzle.form === 'triad' && !helped ? <Tuner a={puzzle.triad.a} c={puzzle.triad.c} palette={palette} soundOn={soundOn} onChange={setLive} onRelease={release} testID="practice-tuner" /> : null}
       {round.finished ? (
         <View style={styles.after}>
           {puzzle.form === 'triad' && puzzle.triad.find ? (
@@ -317,4 +359,14 @@ function FourRound({ round, styles, swing, palette }: RoundProps) {
       </View>
     </>
   );
+}
+
+function makeOwnStyles(p: Palette) {
+  return StyleSheet.create({
+    senses: { flexDirection: 'row', alignSelf: 'center', marginTop: spacing.md, borderRadius: radius.pill, borderWidth: 1, borderColor: p.border, overflow: 'hidden' },
+    sense: { paddingHorizontal: 14, paddingVertical: 6 },
+    senseActive: { backgroundColor: p.accent },
+    senseLabel: { fontFamily: fonts.textMedium, fontSize: type.small.fontSize, color: p.muted },
+    senseLabelActive: { color: p.accentInk },
+  });
 }
