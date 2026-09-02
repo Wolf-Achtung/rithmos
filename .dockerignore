@@ -1,11 +1,13 @@
-# The image only needs api/. Everything else stays out of the build context.
+# Two images build from this root: the API (Dockerfile, needs api/) and the
+# nightly generator (jobs/Dockerfile, needs engine/, jobs/src and the root
+# package files). Everything else stays out of the build context.
 .git/
 node_modules/
 **/node_modules/
-app/
-engine/
-jobs/
+app/*
+!app/package.json
 infra/
+jobs/dist/
 api/.venv/
 api/tests/
 api/.pytest_cache/
