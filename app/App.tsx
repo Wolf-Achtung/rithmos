@@ -6,7 +6,8 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import { Modal, Pressable, SafeAreaView, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { mebben } from '../engine/rules/mebben';
-import type { Session } from './src/api/client';
+import { fetchQuota } from './src/api/client';
+import type { Quota, Session } from './src/api/client';
 import { mergeSkill } from './src/middles/skill';
 import type { SkillRecord } from './src/middles/skill';
 import { MiddlesScreen } from './src/screens/MiddlesScreen';
@@ -61,6 +62,19 @@ export default function App() {
   const [skill, setSkill] = useState<SkillRecord[]>([]);
   const [coverage, setCoverage] = useState<CoverageRecord[]>([]);
   const [board, setBoard] = useState<'choose' | 'small' | 'full'>('choose');
+  const [quota, setQuota] = useState<Quota | null>(null);
+
+  // the day's remaining hunts and rule questions, fetched when the settings open
+  useEffect(() => {
+    if (sheet !== 'settings' || !session) return;
+    let alive = true;
+    fetchQuota(session)
+      .then((q) => alive && setQuota(q))
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [sheet, session]);
 
   useEffect(() => {
     let alive = true;
@@ -223,6 +237,11 @@ export default function App() {
                 />
               </Row>
               <Text style={styles.note}>{texts.ruleSetNote(mebben.name, mebben.source)}</Text>
+              {quota ? (
+                <Text style={styles.note} testID="settings-quota">
+                  {texts.quotaLine(quota.hunt.remaining, quota.rules.remaining)}
+                </Text>
+              ) : null}
               <View style={styles.sheetActions}>
                 <Pressable onPress={() => setSheet('hunt')} style={styles.textButton} testID="settings-hunt">
                   <Text style={styles.textButtonLabel}>{texts.hunt}</Text>

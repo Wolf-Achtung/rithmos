@@ -198,3 +198,10 @@ export async function askRule(session: Session, question: string): Promise<RuleA
     throw e;
   }
 }
+
+/** What is left today per feature (CLAUDE.md, Stufe 6: quotas instead of a paywall). */
+export type Quota = Record<'hunt' | 'rules', { readonly limit: number; readonly remaining: number }>;
+
+export async function fetchQuota(session: Session): Promise<Quota> {
+  return request<Quota>('/v1/quota', { token: session.token });
+}

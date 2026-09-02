@@ -16,7 +16,7 @@ import type { TunerState } from '../components/Tuner';
 import type { Swing, TriadStyles } from '../components/Triad';
 import { chordFrequencies } from '../middles/chord';
 import { MAX_TRIES, feedbackFor } from '../middles/logic';
-import { solvedAtLevel, weakestKind } from '../middles/skill';
+import { solvedAtLevel, weakestKind, practiceToday, PRACTICE_PER_DAY } from '../middles/skill';
 import type { SkillRecord } from '../middles/skill';
 import { playChord } from '../middles/sound';
 import { canTune } from '../middles/tone';
@@ -127,6 +127,25 @@ export function PracticeScreen({ palette, soundOn, records, onSkill }: Props) {
   const wrongTaps = round.taps.filter((t) => !isRight(puzzle, t)).length;
   const unlocked = unlockedLevel((level) => solvedAtLevel(records, level));
   const remaining = unlocked < 5 ? Math.max(0, UNLOCK_AFTER - solvedAtLevel(records, unlocked)) : 0;
+  // the day's quota (CLAUDE.md, Stufe 6): counted on the device, no server
+  const usedToday = practiceToday(records);
+  const closed = usedToday >= PRACTICE_PER_DAY && (round.finished || round.taps.length === 0);
+
+  if (closed && !round.finished) {
+    return (
+      <ScrollView style={styles.root} contentContainerStyle={styles.container} testID="practice">
+        <View style={styles.header}>
+          <Text style={styles.brand}>{texts.practice}</Text>
+        </View>
+        <Text style={styles.sentence} testID="practice-sentence">
+          {texts.practiceClosed(PRACTICE_PER_DAY)}
+        </Text>
+        <Text style={styles.small} testID="practice-progress">
+          {unlocked < 5 ? texts.practiceUnlock(remaining, unlocked + 1) : texts.practiceAllOpen}
+        </Text>
+      </ScrollView>
+    );
+  }
 
   return (
     <ScrollView style={styles.root} contentContainerStyle={styles.container} testID="practice">
@@ -168,7 +187,13 @@ export function PracticeScreen({ palette, soundOn, records, onSkill }: Props) {
               </Text>
             </Pressable>
           ) : null}
-          <PillButton label={texts.next} onPress={next} styles={styles} testID="practice-next" />
+          {closed ? (
+            <Text style={styles.small} testID="practice-closed">
+              {texts.practiceClosed(PRACTICE_PER_DAY)}
+            </Text>
+          ) : (
+            <PillButton label={texts.next} onPress={next} styles={styles} testID="practice-next" />
+          )}
         </View>
       )}
 

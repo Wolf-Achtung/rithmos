@@ -65,8 +65,8 @@ Rechenlast.
 | **2** | Progression: erst arithmetisch, dann geometrisch, dann musikalisch, dann gemischt („welches Mittel?"), dann vier Zahlen mit zwei Mitteln. Deckung je Mittelart über Wochen | **jetzt**, auf dem Gerät gebaut |
 | **3** | Die Erzählerin: nach dem Lösen zwei Stimmen (Mönch, Analystin) und „Wer lügt?“ mit drei Erklärungen, eine stimmt. Der Generator liefert Wahrheit und Lügen als Fakten, das Modell formuliert, der Server prüft jede Zahl. Cachebar pro Rätsel, Tageslimit, AI-Act-Kennzeichnung | gebaut, Schlüssel auf Railway offen |
 | **4** | Das kleine Brett: 4 × 8, vier Steine je Seite (Weiß 2 · 4 · 6 · 8, Schwarz 3 · 6 · 9 · 12), nur die Begegnung, Sieg = eine Harmonie im gegnerischen Feld. Begründung vor dem Zug aus Engine-Angeboten, vier Felder, Gegner mit offenen Karten (fester Text). Öffnet sich mit der fünften Übungsstufe | gebaut; Freitext-Begründung über das Modell offen |
-| **5** | Das volle Brett nach Mebben hinter einer Wahl „Welches Brett?“, mit Markierungsschritt vor jedem eigenen Zug (Deckung auf dem Brett, `PUT /v1/coverage`, auf der Deckungsseite unter „Auf dem Brett“). Regelchat im Regelblatt: `POST /v1/rules/ask`, die Regelfassung als einziger Kontext, jede Zahl geprüft, „steht nicht in der Regelfassung“ als fester Satz, Antwort je Frage gecacht, zwanzig Fragen pro Konto und Tag | gebaut; auf dem Web nicht mit laufendem Modell durchgespielt |
-| **6** | Abo, serverseitige Belegprüfung. **Wolf-Ping vorher** | zuletzt |
+| **5** | Das volle Brett nach Mebben hinter einer Wahl „Welches Brett?“, mit Markierungsschritt vor jedem eigenen Zug (Deckung auf dem Brett, `PUT /v1/coverage`, auf der Deckungsseite unter „Auf dem Brett“). Regelchat im Regelblatt: `POST /v1/rules/ask`, die Regelfassung als einziger Kontext, jede Zahl geprüft, „steht nicht in der Regelfassung“ als fester Satz, Antwort je Frage gecacht, drei Fragen pro Konto und Tag (Kontingent, Stufe 6) | gebaut; auf dem Web nicht mit laufendem Modell durchgespielt |
+| **6** | **Kontingente statt Bezahlschranke** (Entscheidung September 2026, Testphase): alles ist offen, die Funktionen mit Modellkosten sind pro Konto und Tag gezählt — eine Jagd, drei Regelfragen (`api/rithmos_api/quota.py`, `GET /v1/quota`); Üben fünf Rätsel am Tag, auf dem Gerät gezählt. Heute, Kette, Deckung, Erzählerin und beide Bretter ohne Limit. Das Abo (Anbieter, Konto-Bindung) kommt nach der Testphase und hebt die Limits; **Wolf-Ping vorher** | Kontingente gebaut; Abo verschoben |
 
 Die vorhandene Brett-Oberfläche aus der ersten Fassung (`app/src/screens/GameScreen`,
 `Board`, `SetupScreen`) bleibt im Repo, verschwindet aber aus der Navigation, bis
@@ -115,7 +115,7 @@ Stufe 4 sie in vereinfachter Form zurückholt.
 
 - **Harmonie-Jagd.** Ein Foto von etwas Zählbarem; der Spieler tippt zuerst, ob
   darin eine Harmonie steckt; dann zählt das Bildmodell nur (Namen und Anzahlen,
-  `POST /v1/hunt`, sechs Jagden pro Konto und Tag, kein Bild wird gespeichert),
+  `POST /v1/hunt`, eine Jagd pro Konto und Tag (Kontingent, Stufe 6), kein Bild wird gespeichert),
   und die Engine in der App entscheidet, welche Anzahlen ein Mittel bilden. Das
   Modell nennt nie eine Harmonie. Erreichbar hinter dem Zahnrad.
 
@@ -166,7 +166,7 @@ Grundsätze, unabhängig von der Richtung:
 | Backend | FastAPI auf Railway, `api/` |
 | Datenbank | PostgreSQL auf Railway, Schema als SQL in `api/schema/` |
 | Rätsel | nächtlicher Generator in `jobs/`, verifiziert mit dem Solver |
-| Abo | `react-native-purchases` (RevenueCat), braucht Development Build. Stufe 6 |
+| Abo | verschoben bis nach der Testphase; Kandidat `react-native-purchases` (RevenueCat), braucht Development Build. Wolf-Ping vor der Wahl |
 | Auslieferung | EAS Build und EAS Submit; Web-Build nach Netlify über `netlify.toml` |
 
 ### Verzeichnisse

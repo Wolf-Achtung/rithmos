@@ -91,3 +91,14 @@ export function weakestKind(records: readonly SkillRecord[], window = SKILL_WIND
 export function solvedAtLevel(records: readonly SkillRecord[], level: number): number {
   return records.filter((r) => r.mode === 'practice' && r.level === level && r.solved).length;
 }
+
+/** Practice puzzles per day in the test phase (CLAUDE.md, Stufe 6): quotas instead of a paywall. */
+export const PRACTICE_PER_DAY = 5;
+
+/** How many practice puzzles were settled on the calendar day of `now`, local time. */
+export function practiceToday(records: readonly SkillRecord[], now = Date.now()): number {
+  const day = new Date(now);
+  const start = new Date(day.getFullYear(), day.getMonth(), day.getDate()).getTime();
+  const end = start + 86_400_000;
+  return records.filter((r) => r.mode === 'practice' && r.t >= start && r.t < end).length;
+}

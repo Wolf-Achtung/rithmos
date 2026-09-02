@@ -3,6 +3,7 @@
 import base64
 
 from rithmos_api.llm import HuntCounts, HuntGroup, clean_counts
+from rithmos_api.quota import HUNT
 from tests.test_puzzles import auth
 
 PNG = base64.b64encode(b"\x89PNG\r\n\x1a\n" + b"\x00" * 200).decode()
@@ -48,11 +49,12 @@ def test_hunt_counts_and_caps(client):
     assert r.status_code == 200
     body = r.json()
     assert [g["count"] for g in body["groups"]] == [6, 9, 12]
-    assert body["model"] == "fake-vision" and body["remaining"] == 5
-    for _ in range(5):
+    assert body["model"] == "fake-vision" and body["remaining"] == HUNT.per_day - 1
+    for _ in range(HUNT.per_day - 1):
         assert client.post("/v1/hunt", json={"media_type": "image/png", "image": PNG}, headers=a).status_code == 200
     assert client.post("/v1/hunt", json={"media_type": "image/png", "image": PNG}, headers=a).status_code == 429
-    assert app.state.vision.calls == 6
+    assert app.state.vision.calls == HUNT.per_day
+    assert client.get("/v1/quota", headers=a).json()["hunt"] == {"limit": HUNT.per_day, "remaining": 0}
     assert client.post("/v1/hunt", json={"media_type": "image/png", "image": PNG}).status_code == 401
     assert client.post(
         "/v1/hunt", json={"media_type": "image/png", "image": "not base64!!"}, headers=auth(client)

@@ -1,8 +1,9 @@
 """The rules chat with a fake provider: grounded answers come back, ungrounded ones
-become the fixed sentence, a repeated question costs no model call, caps hold."""
+become the fixed sentence, a repeated question costs no model call, quotas hold."""
 
 from rithmos_api.llm import RULES_TEXT, RuleAnswer, check_answer, normalize_question
-from rithmos_api.routers.rules import NOT_IN_RULES, QUESTIONS_PER_ACCOUNT_PER_DAY
+from rithmos_api.quota import RULES
+from rithmos_api.routers.rules import NOT_IN_RULES
 from tests.test_puzzles import auth
 
 
@@ -41,29 +42,30 @@ def test_check_answer_rejects_numbers_outside_the_rules():
 
 
 def test_rules_chat_answers_caches_and_caps(client):
+    assert RULES.per_day == 3
     app = client.app
     app.state.rules = FakeRules()
     a = auth(client)
+    assert client.get("/v1/quota", headers=a).json()["rules"] == {"limit": 3, "remaining": 3}
     r = client.post("/v1/rules/ask", json={"question": "Darf ein Dreieck gerade ziehen?"}, headers=a)
     assert r.status_code == 200
     body = r.json()
     assert body["grounded"] and "diagonal" in body["answer"]
-    assert body["model"] == "fake-rules" and body["remaining"] == QUESTIONS_PER_ACCOUNT_PER_DAY - 1
-    # the same question again, differently spelled: no model call, still an answer
+    assert body["model"] == "fake-rules" and body["remaining"] == 2
+    # the same question again, differently spelled: no model call, still an answer, still counted
     r = client.post("/v1/rules/ask", json={"question": "darf ein DREIECK gerade ziehen"}, headers=a)
-    assert r.status_code == 200 and app.state.rules.calls == 1
+    assert r.status_code == 200 and r.json()["remaining"] == 1 and app.state.rules.calls == 1
+    # an invented number fails the check twice, is not shown and not counted
+    r = client.post("/v1/rules/ask", json={"question": "Wie viele Steine gibt es?"}, headers=a)
+    assert r.status_code == 404 and app.state.rules.calls == 3
     # not in the rules: the fixed sentence, never the model's text
     r = client.post("/v1/rules/ask", json={"question": "Wie spät ist es auf der Uhr?"}, headers=a)
-    assert r.status_code == 200 and r.json() == {**r.json(), "answer": NOT_IN_RULES, "grounded": False}
-    # an invented number fails the check twice and is not shown
-    r = client.post("/v1/rules/ask", json={"question": "Wie viele Steine gibt es?"}, headers=a)
-    assert r.status_code == 404 and app.state.rules.calls == 4
-    # the per-account cap
-    for i in range(QUESTIONS_PER_ACCOUNT_PER_DAY - 3):
-        assert client.post("/v1/rules/ask", json={"question": f"Dreieck Frage {i}"}, headers=a).status_code == 200
+    assert r.status_code == 200 and r.json()["answer"] == NOT_IN_RULES and r.json()["grounded"] is False
+    # the day's quota is spent
     assert client.post("/v1/rules/ask", json={"question": "Dreieck noch eine"}, headers=a).status_code == 429
+    assert client.get("/v1/quota", headers=a).json()["rules"]["remaining"] == 0
     assert client.post("/v1/rules/ask", json={"question": "Dreieck?"}).status_code == 401
-    assert client.post("/v1/rules/ask", json={"question": "a"}, headers=a).status_code == 422
+    assert client.post("/v1/rules/ask", json={"question": "a"}, headers=auth(client)).status_code == 422
 
 
 def test_rules_chat_is_silent_without_a_provider(client):
