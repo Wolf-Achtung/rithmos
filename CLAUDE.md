@@ -518,3 +518,7 @@ committen — immer Branch, dann Pull Request. Tagesreport statt Zwischenmeldung
 - Vierte Korrektur, September 2026: der Produktname. „Middles“ war ein generisches
   englisches Wort, unauffindbar und ohne Bezug zur Adresse. Das Tagesrätsel heißt
   jetzt Rithmos wie das Spiel, und jeder Teilen-Text endet mit rithmos.de.
+
+## Prompt-Vault
+
+Vor jeder Antwort auf eine inhaltliche Frage oder Aufgabe (nicht Code/Debugging/Dateioperationen/Terminal): den Skill `prompt-vault` konsultieren und prüfen, ob einer der 99 Prompts das Kernanliegen abdeckt. Bei klarem Treffer anwenden und in einem Satz nennen („Vorgehen nach *X* (NNN)"). Bei Teiltreffer normal antworten und die strukturierte Variante in einem Satz anbieten. Kein Treffer: nicht erwähnen.
